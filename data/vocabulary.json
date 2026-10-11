@@ -1,0 +1,134 @@
+[
+  {
+    "id": 1,
+    "word": "opportunity",
+    "phonetics": "/ˌɒp.əˈtjuː.nə.ti/",
+    "part_of_speech": "noun",
+    "definition": "A time or set of circumstances that makes it possible to do something.",
+    "translation_uz": "imkoniyat, qulay vaziyat",
+    "example": "Education gives you more opportunities in life.",
+    "example_uz": "Ta'lim hayotda ko'proq imkoniyatlar beradi.",
+    "level": "B1"
+  },
+  {
+    "id": 2,
+    "word": "perseverance",
+    "phonetics": "/ˌpɜː.sɪˈvɪə.rəns/",
+    "part_of_speech": "noun",
+    "definition": "Continued effort to do or achieve something despite difficulties or failure.",
+    "translation_uz": "qat'iyat, sabot, matonat",
+    "example": "Through hard work and perseverance, he succeeded in his career.",
+    "example_uz": "Mashaqqatli mehnat va qat'iyat evaziga u o'z karyerasida muvaffaqiyatga erishdi.",
+    "level": "B2"
+  },
+  {
+    "id": 3,
+    "word": "fluency",
+    "phonetics": "/ˈfluː.ən.si/",
+    "part_of_speech": "noun",
+    "definition": "The ability to speak or write a language easily, well, and quickly.",
+    "translation_uz": "ravonlik, erkin so'zlasha olish",
+    "example": "Daily practice is the key to speaking with great fluency.",
+    "example_uz": "Har kungi mashq erkin va ravon gapirishning kalitidir.",
+    "level": "B1"
+  },
+  {
+    "id": 4,
+    "word": "resilient",
+    "phonetics": "/rɪˈzɪl.jənt/",
+    "part_of_speech": "adjective",
+    "definition": "Able to quickly return to a good condition after difficulty or change.",
+    "translation_uz": "chidashli, bukilmas, bardoshli",
+    "example": "Children are remarkably resilient and adapt fast to new surroundings.",
+    "example_uz": "Bolalar ajoyib darajada moslashuvchan va yangi muhitga tez ko'nikadilar.",
+    "level": "B2"
+  },
+  {
+    "id": 5,
+    "word": "articulate",
+    "phonetics": "/ɑːˈtɪk.jə.lət/",
+    "part_of_speech": "adjective / verb",
+    "definition": "Able to express thoughts and ideas clearly and effectively in words.",
+    "translation_uz": "fikrini aniq va ifodali bayon qila oladigan",
+    "example": "She is an articulate speaker who can persuade any audience.",
+    "example_uz": "U har qanday tinglovchini ishontira oladigan notiq va ifodali so'zlovchidir.",
+    "level": "C1"
+  },
+  {
+    "id": 6,
+    "word": "comprehend",
+    "phonetics": "/ˌkɒm.prɪˈhend/",
+    "part_of_speech": "verb",
+    "definition": "To understand something fully and completely.",
+    "translation_uz": "anglamoq, to'liq tushunmoq",
+    "example": "I could not fully comprehend the complexity of the problem.",
+    "example_uz": "Muammoning naqadar murakkabligini to'liq anglay olmadim.",
+    "level": "B2"
+  },
+  {
+    "id": 7,
+    "word": "meticulous",
+    "phonetics": "/məˈtɪk.jə.ləs/",
+    "part_of_speech": "adjective",
+    "definition": "Very careful and showing great attention to every detail.",
+    "translation_uz": "nihoyatda sinchkov, mayda-chuydasigacha e'tiborli",
+    "example": "He conducted a meticulous review of the English grammar rules.",
+    "example_uz": "U ingliz tili grammatika qoidalarini sinchkovlik bilan ko'rib chiqdi.",
+    "level": "C1"
+  },
+  {
+    "id": 8,
+    "word": "consistent",
+    "phonetics": "/kənˈsɪs.tənt/",
+    "part_of_speech": "adjective",
+    "definition": "Always behaving or happening in a similar, especially positive, way.",
+    "translation_uz": "muntazam, izchil, barqaror",
+    "example": "Consistent daily study of 15 minutes is better than 4 hours once a week.",
+    "example_uz": "Kuniga 15 daqiqa muntazam o'rganish haftada bir marta 4 soat o'rgangandan yaxshiroqdir.",
+    "level": "A2"
+  },
+  {
+    "id": 9,
+    "word": "eloquent",
+    "phonetics": "/ˈel.ə.kwənt/",
+    "part_of_speech": "adjective",
+    "definition": "Giving a clear, strong message, expressing feelings powerfully in speech.",
+    "translation_uz": "fasohatli, notiq, ta'sirchan so'zlovchi",
+    "example": "His eloquent presentation captured everyone's admiration.",
+    "example_uz": "Uning ta'sirchan taqdimoti barchaning olqishiga sazovor bo'ldi.",
+    "level": "C1"
+  },
+  {
+    "id": 10,
+    "word": "ubiquitous",
+    "phonetics": "/juːˈbɪk.wɪ.təs/",
+    "part_of_speech": "adjective",
+    "definition": "Present, appearing, or found everywhere at the same time.",
+    "translation_uz": "hamma joyda hozir bo'lgan, keng tarqalgan",
+    "example": "Smartphones have become ubiquitous in modern everyday life.",
+    "example_uz": "Smartfonlar zamonaviy kundalik hayotda hamma joyda uchraydigan buyumga aylandi.",
+    "level": "C2"
+  },
+  {
+    "id": 11,
+    "word": "ambitious",
+    "phonetics": "/æmˈbɪʃ.əs/",
+    "part_of_speech": "adjective",
+    "definition": "Having a strong desire for success or achievement.",
+    "translation_uz": "intiluvchan, katta maqsadli",
+    "example": "She has ambitious plans to study for her Master's in the UK.",
+    "example_uz": "Uning Buyuk Britaniyada magistraturada o'qish bo'yicha katta rejalari bor.",
+    "level": "A2"
+  },
+  {
+    "id": 12,
+    "word": "confidence",
+    "phonetics": "/ˈkɒn.fɪ.dəns/",
+    "part_of_speech": "noun",
+    "definition": "A feeling of trust in one's abilities, qualities, and judgment.",
+    "translation_uz": "o'ziga ishonch",
+    "example": "Practicing speaking every day will boost your confidence.",
+    "example_uz": "Har kuni gapirishni mashq qilish o'ziga bo'lgan ishonchni oshiradi.",
+    "level": "A2"
+  }
+]

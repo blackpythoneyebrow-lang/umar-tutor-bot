@@ -1,0 +1,10 @@
+# Docker ignore
+cloudflared.exe
+*.db
+*.sqlite3
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.git/
+tests/

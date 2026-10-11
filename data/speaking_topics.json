@@ -1,0 +1,74 @@
+{
+  "curated_resources": [
+    {
+      "name": "BBC Learning English - 6 Minute English",
+      "description": "Har hafta yangi va qiziqarli mavzularda 6 daqiqalik tabiiy inglizcha suhbatlar va lug'atlar.",
+      "url": "https://www.bbc.co.uk/learningenglish/english/features/6-minute-english"
+    },
+    {
+      "name": "British Council Speaking Practice",
+      "description": "A1 dan C1 gacha bo'lgan rasmiy video va audio suhbat darslari hamda mashqlar.",
+      "url": "https://learnenglish.britishcouncil.org/skills/speaking"
+    },
+    {
+      "name": "ELSA Speak (AI Pronunciation App)",
+      "description": "Sun'iy intellekt orqali talaffuzingizdagi xatoliklarni aniq ko'rsatib beruvchi mashhur mobil ilova.",
+      "url": "https://elsaspeak.com/"
+    },
+    {
+      "name": "Voice of America (VOA) Learning English",
+      "description": "Sekinroq va tushunarli tezlikda yangiliklar va intervyularni tinglab takrorlash.",
+      "url": "https://learningenglish.voanews.com/"
+    }
+  ],
+  "shadowing_prompts": [
+    {
+      "id": "shadow_1",
+      "level": "A1-A2",
+      "title": "Introduce Yourself (O'zingizni tanishtiring)",
+      "text": "Hello, my name is Alex. I am twenty-two years old and I live in Tashkent. In my free time, I really enjoy learning English and reading books.",
+      "instructions_uz": "Ushbu matnni baland ovozda, so'zlarni aniq talaffuz qilgan holda o'qing va ovozli xabar (voice message) yuboring."
+    },
+    {
+      "id": "shadow_2",
+      "level": "A2-B1",
+      "title": "My Favorite Weekend Activity (Dam olish kuni)",
+      "text": "Every Saturday morning, I like to wake up early and go for a refreshing run in the nearby park. Fresh air clears my mind and energizes me for the entire day.",
+      "instructions_uz": "Ohang va to'xtamlarga e'tibor bering. Ovozli xabar yozib jo'nating."
+    },
+    {
+      "id": "shadow_3",
+      "level": "B1-B2",
+      "title": "The Power of Lifelong Learning (Doimiy o'rganish)",
+      "text": "Learning a new language is not just about memorizing words; it expands your horizons, introduces you to diverse cultures, and unlocks unprecedented opportunities.",
+      "instructions_uz": "Ushbu fikrni ravon va ishonch bilan talaffuz qilib, botga ovozli xabar qilib yuboring."
+    },
+    {
+      "id": "shadow_4",
+      "level": "B2-C1",
+      "title": "Technological Advancements & Society (Texnologiya va jamiyat)",
+      "text": "Artificial intelligence is fundamentally revolutionizing the landscape of modern education, empowering autonomous learners to access personalized tutoring anytime, anywhere.",
+      "instructions_uz": "Murakkab so'zlar urg'usi va intonatsiyasiga e'tibor berib, ovozli xabar yozing."
+    }
+  ],
+  "free_speech_prompts": [
+    {
+      "id": "free_1",
+      "topic": "Why do you want to learn English?",
+      "topic_uz": "Nima uchun ingliz tilini o'rganmoqchisiz va bu til sizning hayotingizni qanday o'zgartiradi?",
+      "tips_uz": "Kamida 20-40 soniya gapiring. Maqsadingiz, rejalaringiz haqida so'zlab bering."
+    },
+    {
+      "id": "free_2",
+      "topic": "Describe your hometown or current city.",
+      "topic_uz": "O'z ona shahringiz yoki hozir yashayotgan shahringizni tasvirlab bering.",
+      "tips_uz": "Shaharning qaysi jihatlari sizga yoqishi yoki yoqmasligi haqida 30-50 soniya gapiring."
+    },
+    {
+      "id": "free_3",
+      "topic": "What is one big dream you want to achieve in the next 3 years?",
+      "topic_uz": "Kelgusi 3 yil ichida amalga oshirmoqchi bo'lgan eng katta orzuingiz nima?",
+      "tips_uz": "Rejalaringiz, nima sababdan bu orzu muhimligi va unga qanday erishishingizni tushuntiring."
+    }
+  ]
+}

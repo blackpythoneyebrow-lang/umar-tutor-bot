@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "title": "Dars 1: Present Simple & Kundalik Tartib",
+    "level": "A1-A2",
+    "description": "Ushbu darsda odatiy va takrorlanuvchi harakatlar (Daily routines) haqida gapirishni o'rganamiz. Qoida: He/She/It olmoshlariga fe'lga -s/-es qo'shiladi.",
+    "grammar_rules": "• I/You/We/They + verb (I wake up at 7 AM)\n• He/She/It + verb-s/es (He plays tennis)\n• Inkor: don't / doesn't + verb\n• So'roq: Do / Does + ega + verb?",
+    "quiz": [
+      {
+        "id": "hw1_q1",
+        "question": "My brother _____ up at 6:30 every morning.",
+        "options": ["wake", "wakes", "waking", "waked"],
+        "correct": 1,
+        "explanation": "'My brother' (he) bo'lgani uchun fe'lga '-s' qo'shiladi: 'wakes up'."
+      },
+      {
+        "id": "hw1_q2",
+        "question": "We _____ watch TV late at night.",
+        "options": ["doesn't", "don't", "aren't", "isn't"],
+        "correct": 1,
+        "explanation": "'We' olmoshi uchun Present Simple inkorida 'don't' ishlatiladi."
+      },
+      {
+        "id": "hw1_q3",
+        "question": "_____ your sister work in a bank?",
+        "options": ["Do", "Does", "Is", "Are"],
+        "correct": 1,
+        "explanation": "'Your sister' (she) uchun so'roq gapda 'Does' yordamchi fe'li ishlatiladi."
+      }
+    ],
+    "writing_task": {
+      "prompt": "Write 3-5 sentences about your daily routine. (Kundalik tartibingiz haqida 3-5 ta jumla yozing. Masalan: Qachon uyg'onasiz, nima qilasiz va qachon uxlaysiz).",
+      "min_words": 15,
+      "required_keywords": ["wake", "morning", "breakfast", "work", "school", "evening", "bed"],
+      "sample_answer": "I usually wake up at 7:00 in the morning. I wash my face and eat breakfast with my family. Then I go to work by bus. In the evening, I study English and read books before going to bed."
+    }
+  },
+  {
+    "id": 2,
+    "title": "Dars 2: Past Simple & Unutilmas Xotiralar",
+    "level": "A2-B1",
+    "description": "O'tib ketgan aniq vaqtdagi voqea-hodisalar haqida so'zlash. To'g'ri fe'llarga -ed qo'shiladi, noto'g'ri fe'llar esa 2-shaklga (V2) o'zgaradi.",
+    "grammar_rules": "• Tasdiq: Subject + V2 (I bought a laptop yesterday)\n• Inkor: Subject + didn't + V1\n• So'roq: Did + subject + V1?\n• Kalit so'zlar: yesterday, last week, 2 days ago, in 2020",
+    "quiz": [
+      {
+        "id": "hw2_q1",
+        "question": "Last weekend, we _____ a fantastic movie at the cinema.",
+        "options": ["see", "saw", "seen", "seeing"],
+        "correct": 1,
+        "explanation": "'See' fe'lining o'tgan zamon shakli (V2) 'saw' hisoblanadi."
+      },
+      {
+        "id": "hw2_q2",
+        "question": "She didn't _____ to the party because she felt sick.",
+        "options": ["went", "go", "gone", "goes"],
+        "correct": 1,
+        "explanation": "'Didn't' inkor yordamchi fe'lidan keyin asosiy fe'l o'zining boshlang'ich (V1) shaklida keladi: 'didn't go'."
+      },
+      {
+        "id": "hw2_q3",
+        "question": "Where _____ you spend your last summer vacation?",
+        "options": ["did", "do", "were", "had"],
+        "correct": 0,
+        "explanation": "O'tgan zamondagi maxsus so'roq gaplarida yordamchi fe'l 'did' bo'ladi."
+      }
+    ],
+    "writing_task": {
+      "prompt": "Describe what you did last weekend. (O'tgan dam olish kunlarida nimalar qilganingizni Past Simple zamonida 3-5 gapda bayon qiling).",
+      "min_words": 15,
+      "required_keywords": ["went", "visited", "had", "watched", "played", "weekend", "yesterday"],
+      "sample_answer": "Last Saturday, I visited my grandparents in the countryside. We had a wonderful dinner together and talked about old times. On Sunday, I watched an exciting football match with my friends."
+    }
+  },
+  {
+    "id": 3,
+    "title": "Dars 3: Present Perfect & Shaxsiy Tajribalar",
+    "level": "B1-B2",
+    "description": "Hozirgi paytgacha bo'lgan natija yoki hayotiy tajribalar (Life experiences) haqida so'zlash. Qolip: have/has + V3 (Past Participle).",
+    "grammar_rules": "• I/You/We/They + have + V3\n• He/She/It + has + V3\n• Signal so'zlar: already, yet, just, ever, never, since, for",
+    "quiz": [
+      {
+        "id": "hw3_q1",
+        "question": "I have lived in this city _____ five years.",
+        "options": ["since", "for", "during", "from"],
+        "correct": 1,
+        "explanation": "Vaqt davomiyligi (muddat) bilan 'for' ishlatiladi ('for five years')."
+      },
+      {
+        "id": "hw3_q2",
+        "question": "Have you ever _____ an English novel from start to finish?",
+        "options": ["read", "readed", "reading", "reads"],
+        "correct": 0,
+        "explanation": "'Read' fe'lining 3-shakli ham yozilishi 'read' (talaffuzi esa /red/) bo'ladi."
+      },
+      {
+        "id": "hw3_q3",
+        "question": "He has _____ finished his project, so he can relax now.",
+        "options": ["yet", "already", "still", "ever"],
+        "correct": 1,
+        "explanation": "Tasdiq gaplarda allaqachon bajarilgan ish uchun 'already' qo'llaniladi."
+      }
+    ],
+    "writing_task": {
+      "prompt": "Share 2-3 of your greatest achievements or unique experiences using Present Perfect. (O'zingiz erishgan yutuqlar yoki qiziqarli tajribalaringiz haqida 'have/has + V3' qolipidan foydalanib yozing).",
+      "min_words": 20,
+      "required_keywords": ["have", "has", "never", "ever", "achieved", "learned", "visited", "read"],
+      "sample_answer": "I have learned a lot of English vocabulary over the past six months. I have also visited three different foreign countries with my colleagues, which has opened my mind to new cultures."
+    }
+  }
+]

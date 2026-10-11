@@ -1,0 +1,434 @@
+{
+  "A1": [
+    {
+      "id": "a1_1",
+      "question": "She _____ a teacher. She works at a primary school.",
+      "options": ["am", "is", "are", "be"],
+      "correct": 1,
+      "explanation": "'She' olmoshi uchun Present Simple zamonida 'to be' fe'lining 'is' shakli ishlatiladi."
+    },
+    {
+      "id": "a1_2",
+      "question": "Where _____ you live?",
+      "options": ["do", "does", "are", "is"],
+      "correct": 0,
+      "explanation": "'You' olmoshi bilan Present Simple so'roq gaplarida yordamchi fe'l 'do' ishlatiladi."
+    },
+    {
+      "id": "a1_3",
+      "question": "Look! There are two _____ in the park.",
+      "options": ["childs", "children", "child", "childrens"],
+      "correct": 1,
+      "explanation": "'Child' so'zining ko'plik shakli noto'g'ri (irregular) ot bo'lib, 'children' bo'ladi."
+    },
+    {
+      "id": "a1_4",
+      "question": "I don't have _____ milk in the fridge.",
+      "options": ["some", "any", "a", "many"],
+      "correct": 1,
+      "explanation": "Inkor gaplarda sanalmaydigan otlar oldidan 'any' ishlatiladi."
+    },
+    {
+      "id": "a1_5",
+      "question": "What time _____ you go to bed yesterday?",
+      "options": ["did", "do", "were", "are"],
+      "correct": 0,
+      "explanation": "O'tgan zamonda (yesterday) savol berish uchun 'did' yordamchi fe'lidan foydalaniladi."
+    },
+    {
+      "id": "a1_6",
+      "question": "This is my brother. _____ name is David.",
+      "options": ["Her", "His", "Your", "Its"],
+      "correct": 1,
+      "explanation": "O'g'il bola / erkak kishi uchun egalik olmoshi 'His' (uning) bo'ladi."
+    },
+    {
+      "id": "a1_7",
+      "question": "They _____ to London last summer.",
+      "options": ["go", "goed", "went", "going"],
+      "correct": 2,
+      "explanation": "'Go' fe'lining Past Simple (o'tgan zamon) shakli 'went' bo'ladi."
+    },
+    {
+      "id": "a1_8",
+      "question": "Can you _____ English?",
+      "options": ["speak", "speaks", "speaking", "to speak"],
+      "correct": 0,
+      "explanation": "Modal fe'llardan (can, could, must va h.k.) keyin fe'lning oddiy (bare infinitive) shakli keladi."
+    },
+    {
+      "id": "a1_9",
+      "question": "My birthday is _____ May.",
+      "options": ["on", "at", "in", "to"],
+      "correct": 2,
+      "explanation": "Oylar nomi oldidan 'in' predlogi ishlatiladi (in May)."
+    },
+    {
+      "id": "a1_10",
+      "question": "He _____ like coffee; he prefers tea.",
+      "options": ["don't", "doesn't", "isn't", "aren't"],
+      "correct": 1,
+      "explanation": "'He/She/It' olmoshlari bilan Present Simple inkorida 'doesn't' ishlatiladi."
+    }
+  ],
+  "A2": [
+    {
+      "id": "a2_1",
+      "question": "While I _____ my homework, the phone rang.",
+      "options": ["did", "was doing", "am doing", "do"],
+      "correct": 1,
+      "explanation": "O'tgan zamonda davom etayotgan harakat uchun Past Continuous ('was doing') ishlatiladi."
+    },
+    {
+      "id": "a2_2",
+      "question": "Tashkent is much _____ than Samarkand.",
+      "options": ["big", "biger", "bigger", "more big"],
+      "correct": 2,
+      "explanation": "Bir bo'g'inli sifatlarning qiyosiy darajasida oxirgi undosh ikkilanadi va '-er' qo'shiladi ('bigger')."
+    },
+    {
+      "id": "a2_3",
+      "question": "Have you ever _____ to Japan?",
+      "options": ["been", "gone", "went", "go"],
+      "correct": 0,
+      "explanation": "Hayotiy tajribani so'rashda (borib kelganmisiz) Present Perfect zamonida 'been to' ishlatiladi."
+    },
+    {
+      "id": "a2_4",
+      "question": "If it rains tomorrow, we _____ at home.",
+      "options": ["stay", "will stay", "stayed", "would stay"],
+      "correct": 1,
+      "explanation": "First Conditional (birinchi shart mayli): If + Present Simple, will + verb."
+    },
+    {
+      "id": "a2_5",
+      "question": "You _____ wear a uniform at our school; it's a strict rule.",
+      "options": ["must", "can", "might", "could"],
+      "correct": 0,
+      "explanation": "Qat'iy qoida va majburiyatni ifodalash uchun 'must' modal fe'li ishlatiladi."
+    },
+    {
+      "id": "a2_6",
+      "question": "I am interested _____ learning new languages.",
+      "options": ["on", "at", "about", "in"],
+      "correct": 3,
+      "explanation": "'Interested' sifati doimo 'in' predlogi bilan birga ishlatiladi (interested in)."
+    },
+    {
+      "id": "a2_7",
+      "question": "The room _____ cleaned every morning by the housekeeper.",
+      "options": ["is", "was", "are", "has"],
+      "correct": 0,
+      "explanation": "Present Simple majhul nisbat (Passive voice): am/is/are + V3 (is cleaned)."
+    },
+    {
+      "id": "a2_8",
+      "question": "She didn't eat _____ for breakfast because she wasn't hungry.",
+      "options": ["nothing", "anything", "something", "everything"],
+      "correct": 1,
+      "explanation": "Ingliz tilida inkor gapda faqat bitta inkor so'z bo'ladi, shuning uchun 'anything' to'g'ri."
+    },
+    {
+      "id": "a2_9",
+      "question": "He told me that he _____ tired.",
+      "options": ["is", "was", "has been", "will be"],
+      "correct": 1,
+      "explanation": "O'zlashtirma gapda (Reported Speech) o'tgan zamon qoidasiga ko'ra 'is' -> 'was' ga o'zgaradi."
+    },
+    {
+      "id": "a2_10",
+      "question": "I look forward to _____ you next week.",
+      "options": ["see", "saw", "seeing", "seen"],
+      "correct": 2,
+      "explanation": "'Look forward to' iborasidan keyin fe'lning '-ing' (gerund) shakli keladi."
+    }
+  ],
+  "B1": [
+    {
+      "id": "b1_1",
+      "question": "By the time we arrived at the cinema, the film _____.",
+      "options": ["already started", "had already started", "has already started", "was starting"],
+      "correct": 1,
+      "explanation": "O'tgan zamondagi boshqa bir harakatdan oldin sodir bo'lgan ish-harakat uchun Past Perfect ('had started') ishlatiladi."
+    },
+    {
+      "id": "b1_2",
+      "question": "If I _____ you, I would take that job offer.",
+      "options": ["am", "was", "were", "had been"],
+      "correct": 2,
+      "explanation": "Second Conditional shart maylida norasmiy va rasmiy holatda maslahat berishda 'were' ishlatiladi ('If I were you')."
+    },
+    {
+      "id": "b1_3",
+      "question": "He managed _____ the exam despite not studying enough.",
+      "options": ["pass", "passing", "to pass", "to passing"],
+      "correct": 2,
+      "explanation": "'Manage' fe'li o'zidan keyin 'to + infinitive' talab qiladi ('managed to pass')."
+    },
+    {
+      "id": "b1_4",
+      "question": "Although it was raining heavily, _____ we enjoyed our trip.",
+      "options": ["but", "however", "so", "they enjoyed our trip (no extra conjunction)"],
+      "correct": 3,
+      "explanation": "'Although' bo'lgan gaplarda ergash gap boshida 'but' yoki 'however' bog'lovchisi qo'shilmaydi."
+    },
+    {
+      "id": "b1_5",
+      "question": "I haven't seen Sarah _____ three months.",
+      "options": ["since", "for", "during", "from"],
+      "correct": 1,
+      "explanation": "Vaqt davomiyligi (muddat) ko'rsatilganda 'for' predlogi ishlatiladi ('for three months')."
+    },
+    {
+      "id": "b1_6",
+      "question": "The bridge _____ built in 1995.",
+      "options": ["is", "has been", "was", "were"],
+      "correct": 2,
+      "explanation": "O'tgan aniq yilda (in 1995) bajarilgan majhul nisbatdagi ish-harakat uchun Past Simple Passive ('was built') ishlatiladi."
+    },
+    {
+      "id": "b1_7",
+      "question": "Neither John _____ Peter knew the answer to the question.",
+      "options": ["or", "nor", "and", "both"],
+      "correct": 1,
+      "explanation": "'Neither' juft bog'lovchisi doimo 'nor' bilan ishlatiladi ('neither ... nor')."
+    },
+    {
+      "id": "b1_8",
+      "question": "She asked me where _____ .",
+      "options": ["did I live", "I lived", "do I live", "I live"],
+      "correct": 1,
+      "explanation": "Reported questions (o'zlashtirma so'roq gaplar) to'g'ri so'z tartibida bo'ladi: Ega + Kesim ('where I lived')."
+    },
+    {
+      "id": "b1_9",
+      "question": "You shouldn't have _____ that to your boss.",
+      "options": ["say", "saying", "said", "telled"],
+      "correct": 2,
+      "explanation": "O'tgan zamondagi pushaymonlik: modal + have + V3 ('shouldn't have said')."
+    },
+    {
+      "id": "b1_10",
+      "question": "He is used to _____ up early every morning.",
+      "options": ["wake", "waking", "woke", "woken"],
+      "correct": 1,
+      "explanation": "'Be used to' (ko'nikib qolgan bo'lmoq) iborasidan keyin Gerund (V-ing) keladi ('used to waking')."
+    }
+  ],
+  "B2": [
+    {
+      "id": "b2_1",
+      "question": "Had I known about the meeting, I _____ attended.",
+      "options": ["will have", "would have", "would", "had"],
+      "correct": 1,
+      "explanation": "Third Conditional inversiya holati: 'Had I known..., I would have attended'."
+    },
+    {
+      "id": "b2_2",
+      "question": "She regrets _____ so rude to her colleague during yesterday's discussion.",
+      "options": ["to be", "being", "be", "been"],
+      "correct": 1,
+      "explanation": "O'tgan ishdan afsuslanish ma'nosida 'regret' fe'li gerund (V-ing) talab qiladi ('regret being')."
+    },
+    {
+      "id": "b2_3",
+      "question": "Not only _____ the match, but they also broke a tournament record.",
+      "options": ["they won", "did they win", "they have won", "had they won"],
+      "correct": 1,
+      "explanation": "'Not only' jumlasi gap boshida kelsa, inversiya yuzaga keladi: yordamchi fe'l egadan oldinga chiqadi ('did they win')."
+    },
+    {
+      "id": "b2_4",
+      "question": "The company's profits have dropped significantly _____ the rising fuel prices.",
+      "options": ["due to", "because", "despite", "although"],
+      "correct": 0,
+      "explanation": "Otdan yoki otlashgan birikmadan oldin sabab bildirish uchun 'due to' (tufayli) ishlatiladi."
+    },
+    {
+      "id": "b2_5",
+      "question": "It is essential that every student _____ the safety rules.",
+      "options": ["follows", "follow", "followed", "following"],
+      "correct": 1,
+      "explanation": "Present Subjunctive: 'It is essential that + subject + bare infinitive (follow)'."
+    },
+    {
+      "id": "b2_6",
+      "question": "We had our car _____ at the local garage yesterday.",
+      "options": ["repair", "repairing", "repaired", "to repair"],
+      "correct": 2,
+      "explanation": "Causative form (boshqa birovga qildirmoq): have + object + V3 ('had our car repaired')."
+    },
+    {
+      "id": "b2_7",
+      "question": "She speaks fluent Spanish, _____ her sister doesn't know a word.",
+      "options": ["whereas", "unless", "furthermore", "consequently"],
+      "correct": 0,
+      "explanation": "Qarama-qarshilikni ko'rsatuvchi bog'lovchi: 'whereas' (holbuki, vaholanki)."
+    },
+    {
+      "id": "b2_8",
+      "question": "By next December, we _____ on this project for three solid years.",
+      "options": ["will work", "will be working", "will have been working", "have worked"],
+      "correct": 2,
+      "explanation": "Kelajakdagi aniq vaqtgacha davom etib kelayotgan muddat: Future Perfect Continuous ('will have been working')."
+    },
+    {
+      "id": "b2_9",
+      "question": "He was accused _____ stealing trade secrets from his former employer.",
+      "options": ["with", "for", "of", "about"],
+      "correct": 2,
+      "explanation": "'Accuse' fe'li 'of' predlogi bilan bog'lanadi ('accused of doing something')."
+    },
+    {
+      "id": "b2_10",
+      "question": "The negotiations are expected to be tough; _____, both sides are keen to reach an agreement.",
+      "options": ["nonetheless", "therefore", "in addition", "otherwise"],
+      "correct": 0,
+      "explanation": "'Nonetheless' (shunga qaramay) qarama-qarshi fikrlarni bog'lash uchun ishlatiladi."
+    }
+  ],
+  "C1": [
+    {
+      "id": "c1_1",
+      "question": "Seldom _____ such an inspiring and eloquent keynote speech.",
+      "options": ["I have heard", "have I heard", "I had heard", "had heard I"],
+      "correct": 1,
+      "explanation": "Kamdan-kam (Seldom) inkoriy ma'noli ravish gap boshida kelganda inversiya qo'llaniladi ('have I heard')."
+    },
+    {
+      "id": "c1_2",
+      "question": "The committee decided to postpone the vote, _____ the lack of quorum.",
+      "options": ["owing to", "in spite", "with regard", "on behalf"],
+      "correct": 0,
+      "explanation": "'Owing to' rasmiy tilda sabab-oqibatni (tufayli, sababli) bildirish uchun ot birikmasi oldidan keladi."
+    },
+    {
+      "id": "c1_3",
+      "question": "He is widely regarded as one of the foremost _____ on international monetary policy.",
+      "options": ["authorities", "characters", "officials", "rulers"],
+      "correct": 0,
+      "explanation": "'Authority on [subject]' ma'lum sohada yetuk mutaxassis yoki nufuzli olim ma'nosidagi akademik birikmadir."
+    },
+    {
+      "id": "c1_4",
+      "question": "No sooner had the curtain fallen _____ the audience erupted into deafening applause.",
+      "options": ["when", "then", "than", "as"],
+      "correct": 2,
+      "explanation": "'No sooner had ... than' birikmasi o'zgarmas grammatik qolip bo'lib, harakat ketma-ketligini bildiradi."
+    },
+    {
+      "id": "c1_5",
+      "question": "Her groundbreaking research shed fresh _____ on the origins of the phenomenon.",
+      "options": ["light", "view", "vision", "glance"],
+      "correct": 0,
+      "explanation": "'Shed light on' (oydinlik kiritmoq) turg'un frazeologik ibora hisoblanadi."
+    },
+    {
+      "id": "c1_6",
+      "question": "The CEO's resignation came _____ a bolt from the blue.",
+      "options": ["like", "as", "such", "similar"],
+      "correct": 1,
+      "explanation": "'Come as a bolt from the blue' (kutilmaganda chaqmoqdek yopirilmoq / kutilmagan voqea bo'lmoq) idiomatik ifodadir."
+    },
+    {
+      "id": "c1_7",
+      "question": "Under no circumstances _____ confidential documents to unauthorized personnel.",
+      "options": ["should you disclose", "you should disclose", "you disclose", "disclose you"],
+      "correct": 0,
+      "explanation": "'Under no circumstances' (hech qanday holatda) inkor iborasi inversiyani talab qiladi ('should you disclose')."
+    },
+    {
+      "id": "c1_8",
+      "question": "The new legislation is likely to meet with fierce _____ from environmental activists.",
+      "options": ["opposition", "conflict", "refusal", "denial"],
+      "correct": 0,
+      "explanation": "Qonun loyihasiga qarshilik bildirish kontekstida 'meet with fierce opposition' turg'un kollokatsiyadir."
+    },
+    {
+      "id": "c1_9",
+      "question": "It's high time the government _____ tangible measures to curb inflation.",
+      "options": ["take", "takes", "took", "had taken"],
+      "correct": 2,
+      "explanation": "'It's high time + subject + Past Simple' konstruktsiyasi allaqachon bajarilishi kerak bo'lgan ishni bildiradi ('took')."
+    },
+    {
+      "id": "c1_10",
+      "question": "So captivating _____ that no one wanted to leave the auditorium.",
+      "options": ["the performance was", "was the performance", "had been the performance", "the performance had been"],
+      "correct": 1,
+      "explanation": "'So + adjective' gap boshida kelganda inversiya qo'llanadi: 'So captivating was the performance...'."
+    }
+  ],
+  "C2": [
+    {
+      "id": "c2_1",
+      "question": "His controversial statements served only to _____ fuel to the flames of existing tensions.",
+      "options": ["pour", "add", "throw", "ignite"],
+      "correct": 1,
+      "explanation": "'Add fuel to the flames / fire' (olovga moy sepmoq, vaziyatni yanada keskinlashtirmoq) standart ingliz idiomasidir."
+    },
+    {
+      "id": "c2_2",
+      "question": "Were it not for his unwavering perseverance, the venture would surely have _____.",
+      "options": ["foundered", "founded", "floundered", "faltered"],
+      "correct": 0,
+      "explanation": "'Founder' (kema yoki loyiha haqida) cho'kmoq, barbod bo'lmoq ma'nosida ishlatiladi. 'Flounder' esa nochor qolmoq ma'nosida."
+    },
+    {
+      "id": "c2_3",
+      "question": "The defense attorney argued that the evidence was purely circumstantial and lacked any _____ value.",
+      "options": ["probative", "provocative", "presumptive", "perceptive"],
+      "correct": 0,
+      "explanation": "'Probative value' yuridik tilda 'isbotlash qimmati / kuchi' degan ma'noni anglatadi."
+    },
+    {
+      "id": "c2_4",
+      "question": "She has an extraordinary knack _____ discerning underlying motives in complex diplomatic talks.",
+      "options": ["of", "for", "with", "to"],
+      "correct": 1,
+      "explanation": "'Knack for [doing something]' (biror narsaga xos qobiliyat / iste'dod) predlogli birikmasidir."
+    },
+    {
+      "id": "c2_5",
+      "question": "The minister's remarks sparked a contentious debate that shows no sign of _____.",
+      "options": ["abating", "abdicating", "aberrating", "abrogating"],
+      "correct": 0,
+      "explanation": "'Abate' susaymoq, pasaymoq degani. 'Show no sign of abating' turg'un iboradir."
+    },
+    {
+      "id": "c2_6",
+      "question": "Much _____ he tried to mask his disdain, it was plainly evident in his demeanor.",
+      "options": ["as", "like", "so", "even"],
+      "correct": 0,
+      "explanation": "'Much as + subject + verb' (qanchalik urinmasin, garchi... qilsa ham) mazmunida ishlatiladigan rasmiy tuzilma."
+    },
+    {
+      "id": "c2_7",
+      "question": "The candidate's reputation was thoroughly _____ by the investigative journalist's revelations.",
+      "options": ["besmirched", "beleaguered", "bewitched", "bequeathed"],
+      "correct": 0,
+      "explanation": "'Besmirch' (obro'ni bulg'amoq, qoralamoq) so'zi bu kontekstda eng mos akademik va yuqori darajadagi leksik birlikdir."
+    },
+    {
+      "id": "c2_8",
+      "question": "In the face of adversity, she exhibited a remarkable degree of _____ and composure.",
+      "options": ["equanimity", "equivocation", "ephemerality", "equilibrium"],
+      "correct": 0,
+      "explanation": "'Equanimity' qiyin vaziyatda xotirjamlik va bosiqlikni saqlash fazilati (composure bilan sinonim) hisoblanadi."
+    },
+    {
+      "id": "c2_9",
+      "question": "Little _____ that the innocuous agreement would ultimately precipitate a diplomatic crisis.",
+      "options": ["they suspected", "did they suspect", "they had suspected", "suspected they"],
+      "correct": 1,
+      "explanation": "'Little' inkor ma'nosida gap boshida kelsa, inversiya talab etiladi: 'did they suspect'."
+    },
+    {
+      "id": "c2_10",
+      "question": "The treaty was deemed null and _____ following revelations of systemic breaches.",
+      "options": ["void", "vacant", "vain", "vague"],
+      "correct": 0,
+      "explanation": "'Null and void' (yuridik kuchini yo'qotgan, o'z kuchini yo'qotgan) huquqiy va C2 darajadagi binomial iboradir."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  umar_tutor_bot:
+    build: .
+    container_name: umar_tutor_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./umar_tutor.db:/app/umar_tutor.db
+    ports:
+      - "8080:8080"

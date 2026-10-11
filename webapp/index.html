@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Umar Tutor - English Mini App</title>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Custom Mobile UI Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div id="app-container">
+
+    <!-- =========================================
+         GLOBAL TOP APP BAR (LEVEL & ROLE PICKER)
+         ========================================= -->
+    <header id="global-header" class="global-header">
+      <div class="header-left" onclick="navigateScreen('screen-home')">
+        <div class="bot-avatar-badge-sm">
+          <img src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 24px; height: 24px;">
+        </div>
+        <div class="header-title-box">
+          <span class="header-app-name">Umar Tutor</span>
+          <span id="header-user-role-badge" class="role-badge student-badge">👨‍🎓 O'quvchi</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Level Dropdown Selector -->
+        <div class="level-dropdown-wrapper">
+          <button id="level-select-btn" class="level-pill-btn" onclick="toggleLevelMenu()">
+            <span id="current-level-label">B1</span> ▾
+          </button>
+          <div id="level-dropdown-menu" class="level-dropdown-menu">
+            <div class="level-option" onclick="changeGlobalLevel('Starter')">Starter (Boshlang'ich)</div>
+            <div class="level-option" onclick="changeGlobalLevel('A1')">A1 (Elementary)</div>
+            <div class="level-option" onclick="changeGlobalLevel('A2')">A2 (Pre-Intermediate)</div>
+            <div class="level-option" onclick="changeGlobalLevel('B1')">B1 (Intermediate)</div>
+            <div class="level-option" onclick="changeGlobalLevel('B2')">B2 (Upper-Intermediate)</div>
+            <div class="level-option" onclick="changeGlobalLevel('IELTS')">IELTS (Advanced 7.5+)</div>
+          </div>
+        </div>
+
+        <!-- Role / Auth Button -->
+        <button class="role-switch-btn" title="Rolni almashtirish yoki kirish" onclick="openAuthModal()">
+          🔑
+        </button>
+      </div>
+    </header>
+
+    <!-- LIVE MEETING BANNER (Visible when active) -->
+    <div id="live-meeting-banner" class="live-meeting-banner" style="display: none;">
+      <div class="banner-content">
+        <span class="live-pulse-dot"></span>
+        <span id="banner-meeting-text">🔴 Jonli Dars: Bugun 20:30 da!</span>
+      </div>
+      <a id="banner-meeting-btn" href="#" target="_blank" class="banner-action-btn">Kirish 🔗</a>
+    </div>
+
+    <!-- =========================================
+         SCREEN 1: WELCOME / ONBOARDING
+         ========================================= -->
+    <section id="screen-welcome" class="screen active">
+      <div class="welcome-speech-bubble">
+        Assalomu alaykum! 👋 Men <b>"Umar Tutor"</b> ingliz tili yordamchingizman. Keling, ingliz tilingizni qadam-baqadam yuksaltiramiz! 🇬🇧✨
+      </div>
+
+      <div class="robot-mascot-wrapper">
+        <img src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 100%; height: 100%;">
+      </div>
+
+      <div>
+        <h1 class="welcome-hero-title">Umar Tutor</h1>
+        <p class="welcome-hero-sub">Ingliz Tilini Professional O'rganing</p>
+      </div>
+
+      <div class="welcome-actions">
+        <button class="btn-primary" onclick="openAuthModal()">
+          Boshlash (Kirish / Tanlash) 🚀
+        </button>
+        <button class="btn-secondary" onclick="navigateScreen('screen-home')">
+          Mehmon sifatida ko'rish
+        </button>
+        <p class="welcome-footer-quote">Better English • A Brighter Future</p>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 2: DASHBOARD / MAIN MENU
+         ========================================= -->
+    <section id="screen-home" class="screen">
+      <!-- User Quick Summary Card -->
+      <div class="student-hero-card">
+        <div class="hero-card-left">
+          <div class="user-greeting">Xush kelibsiz, <span id="home-user-name">Talaba</span>! 👋</div>
+          <div class="user-code-pill">Kod: <b id="home-user-code">STU-8821</b></div>
+          <div class="user-stats-row">
+            <span class="stat-badge">🔥 <b id="home-streak-days">3</b> kunlik streak</span>
+            <span class="stat-badge">🎯 O'rtacha: <b id="home-accuracy">78%</b></span>
+          </div>
+        </div>
+        <div class="hero-card-right">
+          <div class="hero-level-badge" id="home-hero-level">B1</div>
+        </div>
+      </div>
+
+      <div class="menu-section-title">O'quv Modullari</div>
+
+      <div class="menu-grid">
+        <!-- Vocab Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-vocab')">
+          <div class="grid-card-icon">📖</div>
+          <div class="grid-card-title">Lug'at (Vocab)</div>
+          <div class="grid-card-sub">Audio talaffuz & Maxsus test</div>
+        </div>
+
+        <!-- Speaking Card -->
+        <div class="menu-grid-card highlight-card" onclick="navigateScreen('screen-speaking')">
+          <div class="grid-card-icon">🎙</div>
+          <div class="grid-card-title">Speaking AI</div>
+          <div class="grid-card-sub">ChatGPT tahlili & Band score</div>
+        </div>
+
+        <!-- 5-Type Quiz Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-quiz')">
+          <div class="grid-card-icon">🎮</div>
+          <div class="grid-card-title">5 xil Test (Quiz)</div>
+          <div class="grid-card-sub">Xato topish, Scramble, Gap-fill</div>
+        </div>
+
+        <!-- Grammar Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-grammar')">
+          <div class="grid-card-icon">✍️</div>
+          <div class="grid-card-title">Grammatika</div>
+          <div class="grid-card-sub">Xato vs To'g'ri gap & Qoidalar</div>
+        </div>
+
+        <!-- Listening Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-listening')">
+          <div class="grid-card-icon">🎧</div>
+          <div class="grid-card-title">Listening Studio</div>
+          <div class="grid-card-sub">Audio & Transkript ochilishi</div>
+        </div>
+
+        <!-- Reading Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-reading')">
+          <div class="grid-card-icon">📚</div>
+          <div class="grid-card-title">Reading Hub</div>
+          <div class="grid-card-sub">Matnlar & Savol-javob</div>
+        </div>
+
+        <!-- Shadowing Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-shadowing')">
+          <div class="grid-card-icon">🎬</div>
+          <div class="grid-card-title">Shadowing</div>
+          <div class="grid-card-sub">Video & Qatorlab takrorlash</div>
+        </div>
+
+        <!-- Progress Card -->
+        <div class="menu-grid-card" onclick="navigateScreen('screen-progress')">
+          <div class="grid-card-icon">📊</div>
+          <div class="grid-card-title">Mening O'sishim</div>
+          <div class="grid-card-sub">6 ta mahorat foizlari & Tavsiyalar</div>
+        </div>
+      </div>
+
+      <!-- Teacher Portal Access Card -->
+      <div class="teacher-access-banner" onclick="handleTeacherEntry()">
+        <div class="teacher-banner-left">
+          <div class="teacher-banner-icon">👨‍🏫</div>
+          <div>
+            <div class="teacher-banner-title">O'qituvchi & Admin Portali</div>
+            <div class="teacher-banner-sub">Xatolar tahlili, Kontent qo'shish, Jonli dars va Baholash</div>
+          </div>
+        </div>
+        <div class="teacher-banner-arrow">›</div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 3: VOCABULARY BUILDER
+         ========================================= -->
+    <section id="screen-vocab" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Lug'at O'rganish</span>
+          <span id="vocab-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span id="vocab-counter" class="count-pill">1 / 5</span>
+      </div>
+
+      <!-- Vocab Card -->
+      <div class="vocab-flashcard">
+        <div class="vocab-word-row">
+          <h2 id="vocab-word" class="vocab-word-text">opportunity</h2>
+          <button id="btn-speak-vocab" class="audio-speaker-btn" onclick="playCurrentWordAudio()" title="Talaffuzni eshitish">
+            🔊
+          </button>
+        </div>
+
+        <div class="vocab-meta-row">
+          <span id="vocab-phonetics" class="vocab-phonetics-badge">/ˌɒp.əˈtjuː.nə.ti/</span>
+          <span id="vocab-pos" class="vocab-pos-badge">noun</span>
+        </div>
+
+        <div class="vocab-divider"></div>
+
+        <div class="vocab-translation-box">
+          <div class="vocab-label">O'zbekcha tarjimasi:</div>
+          <div id="vocab-translation" class="vocab-uz-text">imkoniyat, qulay vaziyat</div>
+        </div>
+
+        <div class="vocab-def-box">
+          <div class="vocab-label">Definition:</div>
+          <div id="vocab-definition" class="vocab-def-text">A set of circumstances that makes it possible to do something.</div>
+        </div>
+
+        <div class="vocab-example-box">
+          <div class="vocab-label">Example Sentence:</div>
+          <div id="vocab-example" class="vocab-example-text">"Studying English gives you international job opportunities."</div>
+        </div>
+      </div>
+
+      <!-- Vocab Navigation Actions -->
+      <div class="vocab-action-bar">
+        <button class="btn-secondary vocab-nav-btn" onclick="prevVocabWord()">‹ Oldingi</button>
+        <button class="btn-success vocab-nav-btn" onclick="markWordLearned()">O'rganildi ✓</button>
+        <button class="btn-secondary vocab-nav-btn" onclick="nextVocabWord()">Keyingi ›</button>
+      </div>
+
+      <!-- Special Feature: Take Vocab Test -->
+      <div class="vocab-test-prompt-card">
+        <div>
+          <div class="vocab-test-title">🎯 Lug'at bo'yicha Test Topshirish</div>
+          <div class="vocab-test-desc">O'rganilgan so'zlarni xotirada mustahkamlash uchun interaktiv test ishlang.</div>
+        </div>
+        <button class="btn-primary-sm" onclick="startVocabSpecificQuiz()">Testni Boshlash 🚀</button>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 4: SPEAKING PRACTICE (CHATGPT AI FEEDBACK)
+         ========================================= -->
+    <section id="screen-speaking" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Speaking AI Coach</span>
+          <span id="speaking-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span></span>
+      </div>
+
+      <!-- Speaking Topic / Prompt Card -->
+      <div class="speaking-prompt-card">
+        <div class="speaking-prompt-tag">Mavzu:</div>
+        <h3 id="speaking-prompt-title" class="speaking-prompt-title">Unutilmas sayohatingiz haqida</h3>
+        <p id="speaking-prompt-desc" class="speaking-prompt-desc">
+          Talk about an unforgettable trip you took. Where did you go, who with, and why was it memorable? (45-60 soniya)
+        </p>
+      </div>
+
+      <!-- Live Waveform & Timer -->
+      <div class="recording-studio-box">
+        <div id="recording-timer" class="recording-timer-text">00:00</div>
+        
+        <div class="canvas-waveform-wrapper">
+          <canvas id="waveform-canvas" width="340" height="70"></canvas>
+        </div>
+
+        <div id="recording-status" class="recording-status-msg">
+          Gapirish uchun pastdagi mikrofon tugmasini bosing
+        </div>
+
+        <!-- Mic Button -->
+        <div class="mic-button-wrapper">
+          <button id="mic-toggle-btn" class="mic-pulse-btn" onclick="toggleSpeakingRecord()">
+            <span id="mic-icon" style="font-size: 28px;">🎙</span>
+          </button>
+        </div>
+
+        <div style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">
+          Gapirib bo'lgach, tugmani yana bosing yoki jim turing (avtomatik to'xtaydi)
+        </div>
+      </div>
+
+      <!-- ChatGPT-Style Evaluative AI Feedback Card -->
+      <div id="speaking-ai-feedback-card" class="ai-feedback-card" style="display: none;">
+        <div class="feedback-card-header">
+          <div>
+            <div class="feedback-card-title">🤖 ChatGPT AI Tahlili</div>
+            <div class="feedback-card-sub">Nutqingiz professional darajada baholandi</div>
+          </div>
+          <div class="score-badge-circle">
+            <span id="feedback-score-num" class="score-num">84</span>
+            <span class="score-label">BALL</span>
+          </div>
+        </div>
+
+        <!-- Band & Fluency row -->
+        <div class="feedback-metrics-grid">
+          <div class="metric-mini-card">
+            <span class="metric-label">IELTS Band:</span>
+            <b id="feedback-band" class="metric-val">6.5 - 7.0</b>
+          </div>
+          <div class="metric-mini-card">
+            <span class="metric-label">So'zlar soni:</span>
+            <b id="feedback-words-count" class="metric-val">28 ta</b>
+          </div>
+        </div>
+
+        <!-- Transcription text -->
+        <div class="feedback-transcription-box">
+          <div class="feedback-sub-title">Siz aytgan matn (Transkripsiya):</div>
+          <div id="feedback-transcription-text" class="feedback-transcript-content">
+            "I practice speaking English every day to improve my fluency and vocabulary."
+          </div>
+        </div>
+
+        <!-- Grammar Errors & Fixes -->
+        <div id="feedback-grammar-section" class="feedback-errors-box">
+          <div class="feedback-sub-title">✍️ Grammatik tahlil & Xatolar:</div>
+          <div id="feedback-grammar-list" class="feedback-errors-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Pronunciation & Accent Tips -->
+        <div class="feedback-tip-box">
+          <div class="feedback-sub-title">🔊 Talaffuz & Intonatsiya:</div>
+          <p id="feedback-pronunciation-tip" class="feedback-tip-text">
+            Intonatsiya va so'z urg'usini to'g'ri qo'ying. Tovushlarni aniq chiqarishga e'tibor qarating.
+          </p>
+        </div>
+
+        <!-- Coach Advice in Uzbek -->
+        <div class="feedback-coach-box">
+          <div class="feedback-sub-title">💡 Murabbiy Tavsiyasi (O'zbek tilida):</div>
+          <p id="feedback-coach-text" class="feedback-coach-text">
+            Fikringizni ifodalash yaxshi boshlangan. Nutqda ravonlikni oshirish uchun pauzalarni kamaytirishga harakat qiling!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 5: 5-TYPE INTERACTIVE QUIZZES
+         ========================================= -->
+    <section id="screen-quiz" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Interaktiv Testlar</span>
+          <span id="quiz-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span id="quiz-progress-text" class="count-pill">1 / 5</span>
+      </div>
+
+      <!-- Question Container Card -->
+      <div class="quiz-container-card">
+        <div class="quiz-type-badge-row">
+          <span id="quiz-type-label" class="quiz-type-pill">Standart Test</span>
+          <span id="quiz-streak-counter" style="font-size: 13px; color: var(--accent-blue);">🔥 0 to'g'ri</span>
+        </div>
+
+        <h3 id="quiz-question-title" class="quiz-question-title">Savol yuklanmoqda...</h3>
+
+        <!-- Interactive Question Body (Dynamic depending on type) -->
+        <div id="quiz-interactive-body" class="quiz-body-wrapper">
+          <!-- Will hold MCQ buttons, Scramble chips, Gap input or Error sentence -->
+        </div>
+
+        <!-- Action / Submit button for open-ended or scramble -->
+        <div id="quiz-submit-action-row" style="display: none; margin-top: 16px;">
+          <button id="btn-submit-active-question" class="btn-primary" onclick="submitCurrentInteractiveAnswer()">
+            Javobni Tekshirish ✓
+          </button>
+        </div>
+      </div>
+
+      <!-- INSTANT MISTAKE POPUP / EXPLANATION MODAL -->
+      <div id="quiz-mistake-card" class="quiz-mistake-card" style="display: none;">
+        <div class="mistake-header">
+          <span class="mistake-badge-icon">❌ Xato Javob</span>
+          <button class="close-mistake-btn" onclick="dismissMistakeCard()">✕</button>
+        </div>
+        <div class="mistake-body">
+          <div class="mistake-row">
+            <span class="mistake-label">Sizning javobingiz:</span>
+            <b id="mistake-user-answer" class="mistake-wrong-val">-</b>
+          </div>
+          <div class="mistake-row">
+            <span class="mistake-label">To'g'ri javob:</span>
+            <b id="mistake-correct-answer" class="mistake-correct-val">-</b>
+          </div>
+          <div class="mistake-explanation-box">
+            <div class="mistake-exp-title">💡 Qisqa Tushuntirish (Qoida):</div>
+            <p id="mistake-explanation-text" class="mistake-exp-text">
+              Qoida tushuntirilishi bu yerda chiqadi.
+            </p>
+          </div>
+        </div>
+        <button class="btn-primary-sm" style="margin-top: 10px;" onclick="dismissMistakeCard()">
+          Tushundim, davom etish ›
+        </button>
+      </div>
+
+      <!-- Quiz Completed Result Card -->
+      <div id="quiz-summary-card" class="quiz-summary-card" style="display: none;">
+        <div class="summary-trophy-icon">🏆</div>
+        <h2>Test Yakunlandi!</h2>
+        <div id="quiz-final-score-text" class="summary-score-large">80%</div>
+        <p id="quiz-final-message" style="color: var(--text-muted); margin-bottom: 20px;">
+          Ajoyib natija! Xatolar ustida ishlashni unutmang.
+        </p>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-secondary" onclick="restartCurrentQuiz()">Qayta topshirish</button>
+          <button class="btn-primary" onclick="navigateScreen('screen-progress')">Statistikani ko'rish</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 6: GRAMMAR GUIDE (WRONG VS CORRECT & AI CHECKER)
+         ========================================= -->
+    <section id="screen-grammar" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Grammatika Qo'llanmasi</span>
+          <span id="grammar-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span></span>
+      </div>
+
+      <!-- Topic Card -->
+      <div class="grammar-topic-card">
+        <h3 id="grammar-topic-title" class="grammar-title-text">Present Simple (Oddiy Hozirgi Zamon)</h3>
+        <div id="grammar-topic-formula" class="grammar-formula-chip">I/You/We/They + V1  |  He/She/It + V1 + s/es</div>
+
+        <p id="grammar-topic-summary" class="grammar-summary-text">
+          Muntazam, har kuni takrorlanadigan odatiy ish-harakatlar va faktlar uchun qo'llaniladi.
+        </p>
+
+        <!-- WRONG VS CORRECT COMPARISON BOX -->
+        <div class="diff-comparison-box">
+          <div class="diff-card diff-wrong">
+            <span class="diff-tag wrong-tag">❌ Ko'p uchraydigan XATO:</span>
+            <div id="grammar-wrong-sentence" class="diff-sentence-text">She go to school every day.</div>
+          </div>
+          <div class="diff-card diff-correct">
+            <span class="diff-tag correct-tag">✅ TO'G'RI shakli:</span>
+            <div id="grammar-correct-sentence" class="diff-sentence-text">She goes to school every day.</div>
+          </div>
+        </div>
+
+        <!-- Deep Uzbek Explanation -->
+        <div class="grammar-deep-explanation">
+          <div class="deep-exp-title">💡 Nega xato? (Chuqur tushuntirish):</div>
+          <p id="grammar-explanation-uz" class="deep-exp-text">
+            Uchinchi shaxs birlikda (He, She, It) fe'llarga doimo -s yoki -es qo'shimchasi qo'shiladi: go -> goes, play -> plays.
+          </p>
+        </div>
+
+        <!-- Sample Sentences -->
+        <div class="grammar-examples-box">
+          <div class="deep-exp-title">Misollar:</div>
+          <ul id="grammar-examples-list" class="grammar-examples-list">
+            <li>I drink tea every morning.</li>
+            <li>He watches English movies on Fridays.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Next/Prev Topic Buttons -->
+      <div class="grammar-nav-row">
+        <button class="btn-secondary" onclick="prevGrammarTopic()">‹ Oldingi mavzu</button>
+        <button class="btn-secondary" onclick="nextGrammarTopic()">Keyingi mavzu ›</button>
+      </div>
+
+      <!-- LIVE AI GRAMMAR CHECKER TOOL -->
+      <div class="live-checker-section">
+        <div class="live-checker-title">🔍 Sun'iy Intellekt Grammatika Tekshiruvchisi</div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Ixtiyoriy inglizcha gap yozing, sun'iy intellekt xatoni topadi va o'zbekcha tushuntirib beradi:
+        </p>
+        <textarea id="grammar-input-text" class="grammar-textarea" placeholder="Masalan: I am go to school yesterday..."></textarea>
+        <button class="btn-primary" style="margin-top: 10px;" onclick="checkCustomSentenceGrammar()">
+          Gapni Tahlil Qilish ⚡
+        </button>
+
+        <div id="grammar-live-result-box" class="grammar-live-result-box" style="display: none;">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 7: LISTENING STUDIO (SCRIPT REVEAL & IELTS)
+         ========================================= -->
+    <section id="screen-listening" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Listening Studio</span>
+          <span id="listening-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span></span>
+      </div>
+
+      <!-- Audio Player Card -->
+      <div class="listening-player-card">
+        <div class="audio-cover-badge">🎧</div>
+        <h3 id="listening-lesson-title" class="listening-title-text">At the London Cafe</h3>
+        <div id="listening-speakers-text" class="listening-speakers">Barista & Anna • 0:45</div>
+
+        <!-- Audio Player Controls -->
+        <div class="audio-controls-row">
+          <button id="btn-play-listening" class="audio-play-round-btn" onclick="toggleListeningAudio()">
+            ▶
+          </button>
+          <div class="audio-track-slider">
+            <div id="audio-progress-bar" class="audio-progress-fill" style="width: 0%;"></div>
+          </div>
+          <span id="audio-time-label" class="audio-time-label">0:00</span>
+        </div>
+      </div>
+
+      <!-- Comprehension Question Card -->
+      <div class="listening-quiz-card">
+        <div class="listening-quiz-tag">Savol:</div>
+        <h4 id="listening-question-text" class="listening-q-title">What did Anna order with her coffee?</h4>
+
+        <div id="listening-options-container" class="listening-options-list">
+          <!-- Options injected dynamically -->
+        </div>
+
+        <div id="listening-feedback-msg" class="listening-feedback-msg" style="display: none;"></div>
+      </div>
+
+      <!-- SCRIPT REVEAL BUTTON & ACCORDION -->
+      <div class="listening-script-wrapper">
+        <button id="btn-toggle-script" class="btn-secondary" onclick="toggleListeningScript()">
+          📜 Audio Script / Transkriptni Ko'rish
+        </button>
+
+        <div id="listening-script-box" class="listening-script-box" style="display: none;">
+          <div class="script-box-header">To'liq Suhbat Matni (Script):</div>
+          <pre id="listening-script-content" class="script-pre-text">
+            Script will appear here...
+          </pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 8: READING HUB
+         ========================================= -->
+    <section id="screen-reading" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Reading Hub</span>
+          <span id="reading-level-chip" class="badge-pill">B1</span>
+        </div>
+        <span></span>
+      </div>
+
+      <div class="reading-article-card">
+        <div class="reading-meta-row">
+          <span id="reading-time-badge" class="badge-pill">⏱ 3 min</span>
+          <span class="badge-pill" style="background: rgba(34,197,94,0.15); color: #22c55e;">Comprehension</span>
+        </div>
+
+        <h3 id="reading-article-title" class="reading-title-text">A Day in Tashkent</h3>
+
+        <div id="reading-article-body" class="reading-passage-text">
+          Loading passage...
+        </div>
+
+        <!-- Vocab Helper Box -->
+        <div class="reading-vocab-helper">
+          <div class="vocab-helper-title">💡 Matndagi Kalit So'zlar:</div>
+          <div id="reading-vocab-chips" class="reading-vocab-chips">
+            <!-- Chips injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Reading Comprehension Question -->
+      <div class="reading-question-card">
+        <div class="listening-quiz-tag">Tushunish bo'yicha savol:</div>
+        <h4 id="reading-question-text" class="listening-q-title">Where do families spend their evenings?</h4>
+
+        <div id="reading-options-container" class="listening-options-list">
+          <!-- Options injected dynamically -->
+        </div>
+
+        <div id="reading-feedback-msg" class="listening-feedback-msg" style="display: none;"></div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 9: SHADOWING STUDIO
+         ========================================= -->
+    <section id="screen-shadowing" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Shadowing Studio</span>
+          <span id="shadowing-level-chip" class="badge-pill">B2</span>
+        </div>
+        <span></span>
+      </div>
+
+      <div class="shadowing-card">
+        <h3 id="shadowing-title" class="shadowing-title-text">Steve Jobs: Stay Hungry, Stay Foolish</h3>
+
+        <!-- Video Frame / Embed -->
+        <div class="video-container-box">
+          <iframe id="shadowing-video-frame" src="https://www.youtube.com/embed/UF8uR6Z6KLc" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <!-- Speed control pills -->
+        <div class="speed-control-row">
+          <span style="font-size: 13px; color: var(--text-muted);">Tezlik:</span>
+          <button class="speed-pill active" onclick="setShadowingSpeed(1.0, this)">1.0x</button>
+          <button class="speed-pill" onclick="setShadowingSpeed(0.75, this)">0.75x</button>
+          <button class="speed-pill" onclick="setShadowingSpeed(1.25, this)">1.25x</button>
+        </div>
+
+        <!-- Current Subtitle Line Display -->
+        <div class="active-subtitle-box">
+          <div class="subtitle-label">Hozirgi takrorlanadigan jumla:</div>
+          <div id="shadowing-en-line" class="subtitle-en-text">
+            "Your time is limited, so don't waste it living someone else's life."
+          </div>
+          <div id="shadowing-uz-line" class="subtitle-uz-text">
+            "Vaqtingiz cheklangan, shuning uchun birovning hayotini yashab uni behuda sarflamang."
+          </div>
+
+          <div style="margin-top: 14px; display: flex; gap: 10px;">
+            <button class="btn-primary-sm" onclick="speakCurrentShadowingLine()">🔊 Eshitish</button>
+            <button class="btn-secondary" style="font-size: 13px;" onclick="repeatShadowingLine()">🔁 Takrorlash</button>
+          </div>
+        </div>
+
+        <!-- Script Lines List -->
+        <div class="all-lines-list-box">
+          <div class="subtitle-label" style="margin-bottom: 8px;">Darsdagi barcha jumlalar:</div>
+          <div id="shadowing-all-lines" class="shadowing-lines-container">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 10: MY PROGRESS & RECOMMENDATIONS
+         ========================================= -->
+    <section id="screen-progress" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">Mening O'sishim</span>
+        </div>
+        <span></span>
+      </div>
+
+      <!-- Overall Mastery Circle -->
+      <div class="progress-hero-circle-card">
+        <div class="progress-circle-wrapper">
+          <svg class="progress-ring-svg" width="120" height="120">
+            <circle class="ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="10" fill="transparent" r="50" cx="60" cy="60"/>
+            <circle id="overall-ring-progress" class="ring-fill" stroke="#00b4d8" stroke-width="10" stroke-dasharray="314" stroke-dashoffset="70" stroke-linecap="round" fill="transparent" r="50" cx="60" cy="60"/>
+          </svg>
+          <div class="circle-center-text">
+            <span id="progress-overall-percent" class="circle-number">78%</span>
+            <span class="circle-label">UMUMIY</span>
+          </div>
+        </div>
+
+        <div class="progress-hero-right">
+          <div class="hero-level-chip-large" id="progress-level-badge">B1 Intermediate</div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+            Sizning ingliz tili bo'yicha ko'rsatkichlaringiz real vaqtda yangilanmoqda.
+          </p>
+        </div>
+      </div>
+
+      <!-- 6 Granular Skill Bars -->
+      <div class="skills-breakdown-card">
+        <h4 class="skills-card-title">6 ta Mahorat Foizlari:</h4>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>📖 Lug'at (Vocabulary)</span>
+            <b id="skill-val-vocab">85%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-vocab" class="skill-fill" style="width: 85%;"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>✍️ Grammatika (Grammar)</span>
+            <b id="skill-val-grammar">72%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-grammar" class="skill-fill" style="width: 72%;"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>🎙 Gapirish (Speaking)</span>
+            <b id="skill-val-speaking">65%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-speaking" class="skill-fill" style="width: 65%;"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>🎧 Eshitish (Listening)</span>
+            <b id="skill-val-listening">75%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-listening" class="skill-fill" style="width: 75%;"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>📚 O'qish (Reading)</span>
+            <b id="skill-val-reading">70%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-reading" class="skill-fill" style="width: 70%;"></div></div>
+        </div>
+
+        <div class="skill-bar-item">
+          <div class="skill-name-row">
+            <span>🎮 Testlar (Quiz)</span>
+            <b id="skill-val-quiz">80%</b>
+          </div>
+          <div class="skill-track"><div id="skill-bar-quiz" class="skill-fill" style="width: 80%;"></div></div>
+        </div>
+      </div>
+
+      <!-- WHAT TO IMPROVE / WEAK POINTS RECOMMENDATIONS -->
+      <div class="recommendations-card">
+        <div class="recommendations-header">
+          <span style="font-size: 20px;">💡</span>
+          <div>
+            <h4 class="recommendations-title">Rivojlantirish Kerak Bo'lgan Jihatlar:</h4>
+            <div style="font-size: 12px; color: var(--text-muted);">Xatolaringiz asosida sun'iy intellekt tavsiyalari:</div>
+          </div>
+        </div>
+
+        <div id="weak-points-list" class="weak-points-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         SCREEN 11: TEACHER & ADMIN PORTAL
+         ========================================= -->
+    <section id="screen-teacher" class="screen">
+      <div class="module-header-row">
+        <button class="back-link-btn" onclick="navigateScreen('screen-home')">‹ Asosiy</button>
+        <div class="module-title-box">
+          <span class="module-main-title">👨‍🏫 O'qituvchi Portali</span>
+          <span class="badge-pill" style="background: rgba(34,197,94,0.15); color: #22c55e;">Admin</span>
+        </div>
+        <span></span>
+      </div>
+
+      <!-- Teacher Portal Nav Tabs -->
+      <div class="teacher-tabs-row">
+        <button class="teacher-tab-btn active" onclick="switchTeacherTab('tab-analytics', this)">📊 Tahlil</button>
+        <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-cms', this)">✍️ CMS Kontent</button>
+        <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-meetings', this)">🔴 Darslar</button>
+        <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-marking', this)">📝 Baholash</button>
+      </div>
+
+      <!-- TAB 1: ANALYTICS & ERROR LOGS -->
+      <div id="tab-analytics" class="teacher-tab-pane active">
+        <!-- Overview Stats -->
+        <div class="analytics-stats-grid">
+          <div class="stat-box">
+            <span class="stat-box-num" id="teacher-stat-users">12</span>
+            <span class="stat-box-label">Jami O'quvchilar</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-num" id="teacher-stat-active">5</span>
+            <span class="stat-box-label">Bugun Faollar</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-box-num" id="teacher-stat-mistakes">34</span>
+            <span class="stat-box-label">Qayd etilgan Xatolar</span>
+          </div>
+        </div>
+
+        <!-- ERROR ANALYTICS: WHERE STUDENTS STRUGGLE MOST -->
+        <div class="error-analytics-card">
+          <h4 class="error-analytics-title">⚠️ O'quvchilar Qayerda Ko'proq Xato Qilmoqda?</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            Eng ko'p xato qilingan savollar va mavzular tahlili:
+          </p>
+          <div id="teacher-top-errors-list" class="top-errors-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Students Roster -->
+        <div class="students-roster-card">
+          <h4 class="roster-title">👥 Ro'yxatdan O'tgan O'quvchilar:</h4>
+          <div id="teacher-students-table" class="students-list-container">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: CMS CONTENT CREATOR -->
+      <div id="tab-cms" class="teacher-tab-pane">
+        <div class="cms-creator-card">
+          <h4 class="cms-title">➕ Dasturga Yangi Material Joylash:</h4>
+          
+          <div class="form-group">
+            <label class="form-label">Material turi:</label>
+            <select id="cms-category-select" class="form-input" onchange="renderCmsFormFields()">
+              <option value="vocab">Lug'at (So'z qo'shish)</option>
+              <option value="quiz">Test Savoli qo'shish (Quiz)</option>
+              <option value="grammar">Grammatika Mavzusi qo'shish</option>
+              <option value="listening">Listening Darsi qo'shish</option>
+              <option value="reading">Reading Matni qo'shish</option>
+              <option value="shadowing">Shadowing Video qo'shish</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Qaysi Daraja uchun (Level):</label>
+            <select id="cms-level-select" class="form-input">
+              <option value="Starter">Starter</option>
+              <option value="A1">A1</option>
+              <option value="A2">A2</option>
+              <option value="B1" selected>B1</option>
+              <option value="B2">B2</option>
+              <option value="IELTS">IELTS</option>
+            </select>
+          </div>
+
+          <!-- Dynamic form fields depending on category -->
+          <div id="cms-dynamic-fields-container">
+            <!-- Injected by renderCmsFormFields() -->
+          </div>
+
+          <button class="btn-primary" style="margin-top: 14px;" onclick="submitCmsContent()">
+            Dasturga Saqlash 🚀
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 3: LIVE MEETINGS SCHEDULER -->
+      <div id="tab-meetings" class="teacher-tab-pane">
+        <div class="meeting-scheduler-card">
+          <h4 class="cms-title">🔴 Yangi Jonli Dars (Meeting) Qo'yish:</h4>
+          <div class="form-group">
+            <label class="form-label">Dars Mavzusi:</label>
+            <input id="meet-title-input" class="form-input" type="text" placeholder="Masalan: IELTS Speaking Mock Test">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qaysi Daraja:</label>
+            <input id="meet-level-input" class="form-input" type="text" value="Barcha darajalar">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vaqti va Sanasi:</label>
+            <input id="meet-time-input" class="form-input" type="text" placeholder="Masalan: Bugun, soat 20:30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dars Havolasi (Link):</label>
+            <input id="meet-link-input" class="form-input" type="url" placeholder="https://zoom.us yoki Telegram havola">
+          </div>
+          <button class="btn-primary" onclick="createMeetingFromTeacher()">
+            Jonli Darsni E'lon Qilish 📢
+          </button>
+        </div>
+
+        <div class="active-meetings-card">
+          <h4 class="roster-title">Mavjud Jonli Darslar:</h4>
+          <div id="teacher-meetings-list" class="meetings-list-box">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: MARKING & FEEDBACK HUB -->
+      <div id="tab-marking" class="teacher-tab-pane">
+        <div class="marking-hub-card">
+          <h4 class="cms-title">📝 O'quvchilar Topshiriqlarini Baholash:</h4>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            O'quvchilar yuborgan Speaking audio matnlari va yozma topshiriqlariga o'qituvchi bahosi va izohi:
+          </p>
+          <div id="teacher-submissions-queue" class="submissions-queue-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================
+         ROLE SELECTION & AUTH MODAL
+         ========================================= -->
+    <div id="auth-modal" class="auth-modal" style="display: none;">
+      <div class="auth-modal-content">
+        <div class="auth-modal-header">
+          <h3>👤 Kirish & Rolni Tanlash</h3>
+          <button class="close-auth-btn" onclick="closeAuthModal()">✕</button>
+        </div>
+
+        <!-- Role Option Tabs -->
+        <div class="auth-role-tabs">
+          <button id="auth-tab-student" class="auth-role-tab active" onclick="switchAuthRole('student')">
+            👨‍🎓 O'quvchi
+          </button>
+          <button id="auth-tab-teacher" class="auth-role-tab" onclick="switchAuthRole('teacher')">
+            👨‍🏫 O'qituvchi / Admin
+          </button>
+        </div>
+
+        <!-- Student Auth Form -->
+        <div id="auth-student-form" class="auth-form-pane">
+          <div class="form-group">
+            <label class="form-label">Shaxsiy O'quvchi PIN / Kodi:</label>
+            <input id="auth-student-code" class="form-input" type="text" placeholder="Masalan: STU-8821">
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Har bir o'quvchi faqat o'z shaxsiy kodi bilan kirib natijalarini ko'radi.
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ismingiz:</label>
+            <input id="auth-student-name" class="form-input" type="text" placeholder="Ismingizni kiriting">
+          </div>
+          <button class="btn-primary" onclick="submitStudentLogin()">
+            O'quvchi Sifatida Kirish 🚀
+          </button>
+        </div>
+
+        <!-- Teacher Auth Form -->
+        <div id="auth-teacher-form" class="auth-form-pane" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">Maxfiy O'qituvchi Paroli:</label>
+            <input id="auth-teacher-password" class="form-input" type="password" placeholder="Maxfiy parolni kiriting">
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Admin & O'qituvchi paroli: <b>UMAR2026</b>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="submitTeacherLogin()">
+            Boshqaruv Paneliga Kirish 🔐
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================
+         BOTTOM APP NAVIGATION
+         ========================================= -->
+    <nav class="bottom-nav-bar">
+      <div class="nav-item active" onclick="navigateScreen('screen-home', this)">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Asosiy</span>
+      </div>
+      <div class="nav-item" onclick="navigateScreen('screen-vocab', this)">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">Lug'at</span>
+      </div>
+      <div class="nav-item" onclick="navigateScreen('screen-speaking', this)">
+        <span class="nav-icon">🎙</span>
+        <span class="nav-label">Speaking</span>
+      </div>
+      <div class="nav-item" onclick="navigateScreen('screen-quiz', this)">
+        <span class="nav-icon">🎮</span>
+        <span class="nav-label">Test</span>
+      </div>
+      <div class="nav-item" onclick="navigateScreen('screen-progress', this)">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">O'sishim</span>
+      </div>
+    </nav>
+
+  </div>
+
+  <!-- Educational Datasets -->
+  <script src="js/data.js"></script>
+  <!-- Main Application Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
