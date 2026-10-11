@@ -609,7 +609,14 @@ async def configure_bot_services():
                 platform="Telegram Video Dars"
             )
 
-    # If WEBAPP_URL is empty, attempt automatic cloudflared tunnel
+    # Auto-detect Render public URL if running on Render
+    if not settings.WEBAPP_URL or not settings.WEBAPP_URL.startswith("https://"):
+        render_url = os.environ.get("RENDER_EXTERNAL_URL")
+        if render_url and render_url.startswith("https://"):
+            settings.WEBAPP_URL = render_url
+            logger.info(f"✨ Auto-detected Render public URL: {settings.WEBAPP_URL}")
+
+    # If still empty on local machine, attempt automatic cloudflared tunnel
     if not settings.WEBAPP_URL or not settings.WEBAPP_URL.startswith("https://"):
         tunnel_url = await start_cloudflared_tunnel(settings.PORT)
         if tunnel_url:

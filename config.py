@@ -34,7 +34,18 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @field_validator("WEBAPP_URL", mode="before")
+    @classmethod
+    def assemble_webapp_url(cls, v):
+        if v and str(v).strip().startswith("https://"):
+            return str(v).strip()
+        render_url = os.environ.get("RENDER_EXTERNAL_URL")
+        if render_url and render_url.startswith("https://"):
+            return render_url
+        return ""
+
     @field_validator("ADMIN_IDS", mode="before")
+
     @classmethod
     def parse_admin_ids(cls, v):
         if isinstance(v, list):
