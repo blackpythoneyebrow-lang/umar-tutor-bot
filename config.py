@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     WEBHOOK_PATH: str = "/webhook"
     WEBAPP_URL: str = ""  # WebApp URL (empty = auto cloudflared tunnel locally, or https://... in prod)
     HOST: str = "0.0.0.0"
-    PORT: int = 8080
+    PORT: int = int(os.environ.get("PORT", 8080))
 
     # Learning defaults
     DAILY_WORDS_TARGET: int = 5

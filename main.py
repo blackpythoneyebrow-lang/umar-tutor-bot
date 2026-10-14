@@ -206,7 +206,7 @@ async def api_update_level(request: web.Request) -> web.Response:
 
 
 async def api_speaking_analyze(request: web.Request) -> web.Response:
-    """ChatGPT-style evaluative AI speech feedback endpoint."""
+    """ChatGPT-style realistic and evaluative AI speech feedback endpoint."""
     try:
         data = await request.json()
         transcript = data.get("text", "").strip()
@@ -215,47 +215,113 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
         prompt_title = data.get("prompt_title", "Speaking Practice")
         telegram_id = data.get("telegram_id")
 
-        if not transcript:
-            transcript = "I practice speaking English every day to improve my fluency and vocabulary."
+        words = [w for w in re.findall(r"\b[\w'-]+\b", transcript.lower()) if w]
+        word_count = len(words)
 
-        # Analyze grammar using rule checker
+        # 1. No speech detected
+        if word_count == 0:
+            return web.json_response({
+                "score": 25,
+                "band": "2.5 - 3.0",
+                "status": "poor",
+                "transcription": "Nutq aniqlanmadi (ovoz eshitilmadi)",
+                "word_count": 0,
+                "has_error": True,
+                "grammar_errors": [{
+                    "original": "-",
+                    "corrected": "Iltimos, balandroq ovozda gapiring",
+                    "reason_uz": "Hech qanday inglizcha so'z yozib olinmadi. Mikrofonni tekshiring va qaytadan gapiring."
+                }],
+                "pronunciation_tip": "❌ Ovoz aniqlanmadi. Mikrofon ruxsatini yoqing va balandroq gapiring.",
+                "vocab_upgrades": [],
+                "feedback_uz": "Afsuski, birorta ham so'z aniqlanmadi. Qaytadan mikrofon tugmasini bosib, berilgan mavzu bo'yicha gapirib bering!"
+            })
+
+        # 2. Too short speech (< 4 words: e.g. "hello", "yes okay")
+        if word_count < 4:
+            score = 35 + (word_count * 5)
+            return web.json_response({
+                "score": score,
+                "band": "3.5 - 4.0",
+                "status": "poor",
+                "transcription": transcript,
+                "word_count": word_count,
+                "has_error": True,
+                "grammar_errors": [{
+                    "original": transcript,
+                    "corrected": "To'liq gap tuzing (Ega + Kesim + To'ldiruvchi)",
+                    "reason_uz": "Nutq juda qisqa bo'lgani sababli IELTS/CEFR mezonlari bo'yicha to'liq baholab bo'lmadi."
+                }],
+                "pronunciation_tip": "⚠️ Qisqa iboralar. Fikringizni kamida 2-3 ta to'liq gap bilan ifodalash tavsiya etiladi.",
+                "vocab_upgrades": [{"simple": transcript, "advanced": "To'liq gap tuzish"}],
+                "feedback_uz": f"Siz atigi {word_count} ta so'z aytdingiz ('{transcript}'). Sun'iy intellekt xato va talaffuzni chuqur tahlil qilishi uchun kamida 2-3 ta to'liq gap gapirib bering!"
+            })
+
+        # 3. Analyze grammar using rule checker and heuristic patterns
         grammar_analysis = analyze_grammar(transcript)
-        word_count = len(transcript.split())
-
-        # Determine Score & Band
-        base_score = 75
-        if not grammar_analysis["has_error"]:
-            base_score += 15
-        if word_count > 15:
-            base_score += 8
-        final_score = min(98, max(55, base_score))
-
-        # Band conversion
-        if final_score >= 90:
-            band = "7.5 - 8.0"
-        elif final_score >= 80:
-            band = "6.5 - 7.0"
-        elif final_score >= 70:
-            band = "5.5 - 6.0"
-        else:
-            band = "4.5 - 5.0"
-
-        # Generate structured ChatGPT-style feedback
         grammar_errors = []
+
         if grammar_analysis.get("has_error"):
             issues = grammar_analysis.get("issues", [])
-            reason = issues[0]["explanation"] if issues else "Grammatik xatolik aniqlandi."
+            reason = issues[0]["explanation"] if issues else "Grammatik noaniqlik aniqlandi."
             grammar_errors.append({
                 "original": grammar_analysis.get("original", ""),
                 "corrected": grammar_analysis.get("corrected", ""),
                 "reason_uz": reason
             })
 
-        feedback_uz = (
-            f"Fikringizni ifodalash yaxshi boshlangan ({word_count} ta so'z). "
-            f"Nutqda ravonlikni oshirish uchun pauzalarni kamaytirish va so'z urg'ulariga e'tibor bering. "
-            f"Keyingi safar 'moreover', 'in my opinion' kabi bog'lovchi iboralarni qo'shsangiz balingiz yanada oshadi!"
-        )
+        # Additional common pattern checks
+        lower_t = transcript.lower()
+        if ("he go " in lower_t or "she go " in lower_t or "it go " in lower_t) and not any(e["original"] == "he/she go" for e in grammar_errors):
+            grammar_errors.append({
+                "original": "he/she go",
+                "corrected": "he/she goes",
+                "reason_uz": "Uchinchi shaxs birlikda fe'lga -s yoki -es qo'shimchasi qo'shiladi."
+            })
+        if ("i are " in lower_t or "i is " in lower_t) and not any(e["original"] == "I are/is" for e in grammar_errors):
+            grammar_errors.append({
+                "original": "I are/is",
+                "corrected": "I am",
+                "reason_uz": "Birinchi shaxs birlikda 'am' yordamchi fe'li ishlatiladi."
+            })
+        if ("yesterday i go" in lower_t) and not any(e["original"] == "yesterday I go" for e in grammar_errors):
+            grammar_errors.append({
+                "original": "yesterday I go",
+                "corrected": "yesterday I went",
+                "reason_uz": "O'tgan zamonda fe'lning 2-shakli (went) ishlatilishi lozim."
+            })
+
+        has_error = len(grammar_errors) > 0
+
+        # Calculate realistic score & band
+        if has_error:
+            score = max(45, min(64, 52 + (word_count // 3) - (len(grammar_errors) * 6)))
+            band = "4.5 - 5.0" if score < 58 else "5.0 - 5.5"
+            status = "poor" if score < 56 else "warning"
+            pronunciation_tip = "⚠️ Tovushlarda ikkilanish va intonatsiya xatolari sezildi. Tovushlarni aniq va ravon talaffuz qiling."
+            feedback_uz = (
+                f"Nutqingizda xatoliklar aniqlandi ({word_count} ta so'z). "
+                f"Grammatik qoidalar va zamonlar mosligiga alohida e'tibor bering. "
+                f"Xatolarni to'g'rilab, qaytadan gapirib ko'ring!"
+            )
+        elif word_count < 10:
+            score = 68 + (word_count - 4)
+            band = "5.5 - 6.0"
+            status = "warning"
+            pronunciation_tip = "Intonatsiya yaxshi, ammo gap hajmini oshiring."
+            feedback_uz = (
+                f"Grammatika to'g'ri, lekin nutq biroz qisqa bo'ldi ({word_count} ta so'z). "
+                f"Fikringizni yanada boyitish uchun 'because', 'however', 'furthermore' kabi bog'lovchilardan foydalaning!"
+            )
+        else:
+            score = min(95, 78 + (word_count // 2))
+            band = "6.5 - 7.0" if score < 88 else "7.5 - 8.0"
+            status = "good"
+            pronunciation_tip = "✅ Ajoyib! Talaffuz aniq va tabiiy ritmda yangradi."
+            feedback_uz = (
+                f"Juda yaxshi natija! Nutq ravon ({word_count} ta so'z) va fikr aniq ifodalangan. "
+                f"IELTS Speaking mezonlariga mos ravishda ifoda etdingiz."
+            )
 
         vocab_upgrades = [
             {"simple": "good", "advanced": "exceptional / beneficial"},
@@ -265,39 +331,41 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
 
         # Save to DB if user exists
         if telegram_id:
-            session_maker = get_session_maker()
-            async with session_maker() as session:
-                user = await crud.get_user_by_telegram_id(session, int(telegram_id))
-                if user:
-                    await crud.save_speaking_submission(
-                        session=session,
-                        user_id=user.id,
-                        prompt_id=prompt_id,
-                        prompt_text=prompt_title,
-                        transcription=transcript,
-                        duration=max(10, word_count * 2),
-                        score=final_score,
-                        feedback=feedback_uz
-                    )
-                    # Queue in Teacher marking hub
-                    await crud.create_submission_review(
-                        session=session,
-                        user_id=user.id,
-                        submission_type="speaking",
-                        title=f"{level}: {prompt_title}",
-                        student_content=transcript
-                    )
-                    # Update speaking skill %
-                    await crud.update_user_skills(session, user.id, {"speaking": final_score})
+            try:
+                session_maker = get_session_maker()
+                async with session_maker() as session:
+                    user = await crud.get_user_by_telegram_id(session, int(telegram_id))
+                    if user:
+                        await crud.save_speaking_submission(
+                            session=session,
+                            user_id=user.id,
+                            prompt_id=prompt_id,
+                            prompt_text=prompt_title,
+                            transcription=transcript,
+                            duration=max(10, word_count * 2),
+                            score=score,
+                            feedback=feedback_uz
+                        )
+                        await crud.create_submission_review(
+                            session=session,
+                            user_id=user.id,
+                            submission_type="speaking",
+                            title=f"{level}: {prompt_title}",
+                            student_content=transcript
+                        )
+                        await crud.update_user_skills(session, user.id, {"speaking": score})
+            except Exception as dbe:
+                logger.warning(f"Note saving speaking submission: {dbe}")
 
         return web.json_response({
-            "score": final_score,
+            "score": score,
             "band": band,
+            "status": status,
             "transcription": transcript,
             "word_count": word_count,
-            "has_error": grammar_analysis["has_error"],
+            "has_error": has_error,
             "grammar_errors": grammar_errors,
-            "pronunciation_tip": "Intonatsiya va so'z urg'usini to'g'ri qo'ying. Tovushlarni aniq chiqarishga e'tibor qarating.",
+            "pronunciation_tip": pronunciation_tip,
             "vocab_upgrades": vocab_upgrades,
             "feedback_uz": feedback_uz
         })
@@ -305,6 +373,67 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
     except Exception as e:
         logger.error(f"Error in speaking analyze: {e}")
         return web.json_response({"error": str(e)}, status=500)
+
+
+async def api_teacher_upload_avatar(request: web.Request) -> web.Response:
+    """Uploads teacher's personal photo/avatar to replace robot mascot."""
+    try:
+        data = await request.json()
+        avatar_data = str(data.get("avatar_data", "")).strip()
+
+        assets_dir = WEBAPP_DIR / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        avatar_path = assets_dir / "teacher_avatar.png"
+        meta_path = assets_dir / "avatar_meta.json"
+
+        if avatar_data.startswith("data:image"):
+            import base64
+            header, encoded = avatar_data.split(",", 1)
+            img_bytes = base64.b64decode(encoded)
+            with open(avatar_path, "wb") as f:
+                f.write(img_bytes)
+            avatar_url = "assets/teacher_avatar.png"
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump({"avatar_url": avatar_url}, f)
+            return web.json_response({"success": True, "avatar_url": avatar_url})
+        elif avatar_data.startswith("http://") or avatar_data.startswith("https://"):
+            avatar_url = avatar_data
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump({"avatar_url": avatar_url}, f)
+            return web.json_response({"success": True, "avatar_url": avatar_url})
+        elif avatar_data == "reset":
+            if avatar_path.exists():
+                try:
+                    avatar_path.unlink()
+                except Exception:
+                    pass
+            if meta_path.exists():
+                try:
+                    meta_path.unlink()
+                except Exception:
+                    pass
+            return web.json_response({"success": True, "avatar_url": "assets/robot.svg"})
+        else:
+            return web.json_response({"success": False, "message": "Noto'g'ri rasm formati"}, status=400)
+    except Exception as e:
+        logger.error(f"Error uploading avatar: {e}")
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+async def api_teacher_get_avatar(request: web.Request) -> web.Response:
+    """Returns the current admin avatar URL."""
+    meta_path = WEBAPP_DIR / "assets" / "avatar_meta.json"
+    avatar_path = WEBAPP_DIR / "assets" / "teacher_avatar.png"
+    if meta_path.exists():
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return web.json_response(data)
+        except Exception:
+            pass
+    if avatar_path.exists():
+        return web.json_response({"avatar_url": "assets/teacher_avatar.png"})
+    return web.json_response({"avatar_url": "assets/robot.svg"})
 
 
 async def api_quiz_submit(request: web.Request) -> web.Response:
@@ -534,6 +663,8 @@ def create_web_application() -> web.Application:
     app.router.add_post("/api/teacher/add-content", api_teacher_add_content)
     app.router.add_get("/api/teacher/content", api_teacher_get_content)
     app.router.add_post("/api/teacher/delete-content", api_teacher_delete_content)
+    app.router.add_post("/api/teacher/upload-avatar", api_teacher_upload_avatar)
+    app.router.add_get("/api/teacher/avatar", api_teacher_get_avatar)
 
     # Meetings & Marking Hub APIs
     app.router.add_get("/api/meetings", api_meetings)

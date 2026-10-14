@@ -30,12 +30,17 @@ const state = {
   // Vocab State
   vocabIndex: 0,
   vocabFilterList: [],
+  selectedVocabTopic: 'all',
   // Speaking State
   isRecording: false,
   recordSeconds: 0,
   recordInterval: null,
   recognition: null,
   spokenText: "",
+  mediaStream: null,
+  mediaRecorder: null,
+  audioChunks: [],
+  recordedAudioUrl: null,
   // Quiz State
   quizList: [],
   quizIndex: 0,
@@ -69,10 +74,12 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   initTelegramSDK();
   loadSavedUserSession();
+  loadSavedAvatar();
   initSpeechEngine();
   initWaveformCanvas();
   applyActiveLevel(state.activeLevel, false);
   fetchActiveLiveMeetings();
+  fetchTeacherMaterials();
 });
 
 function initTelegramSDK() {
@@ -391,11 +398,45 @@ function updateHeaderRoleBadge() {
 // =========================================================================
 function getFilteredWords() {
   const allWords = window.APP_DATA?.words || [];
+  let levelWords = allWords.filter(w => w.level === state.activeLevel);
+  if (levelWords.length === 0) levelWords = allWords;
+
+  if (state.selectedVocabTopic && state.selectedVocabTopic !== 'all') {
+    const topicFiltered = levelWords.filter(w => w.topic === state.selectedVocabTopic);
+    if (topicFiltered.length > 0) return topicFiltered;
+  }
+  return levelWords;
+}
+
+function updateVocabTopicDropdown() {
+  const select = document.getElementById('vocab-topic-select');
+  if (!select) return;
+
+  const allWords = window.APP_DATA?.words || [];
   const levelWords = allWords.filter(w => w.level === state.activeLevel);
-  return levelWords.length > 0 ? levelWords : allWords;
+  const topics = Array.from(new Set(levelWords.map(w => w.topic).filter(Boolean)));
+
+  let html = `<option value="all">Barcha dars mavzulari (${levelWords.length} ta so'z)</option>`;
+  topics.forEach(t => {
+    const count = levelWords.filter(w => w.topic === t).length;
+    const isSelected = state.selectedVocabTopic === t ? 'selected' : '';
+    html += `<option value="${t}" ${isSelected}>${t} (${count} ta)</option>`;
+  });
+  select.innerHTML = html;
+}
+
+function onVocabTopicChange() {
+  triggerHaptic('light');
+  const select = document.getElementById('vocab-topic-select');
+  if (select) {
+    state.selectedVocabTopic = select.value;
+    state.vocabIndex = 0;
+    renderCurrentVocabWord();
+  }
 }
 
 function renderCurrentVocabWord() {
+  updateVocabTopicDropdown();
   const words = getFilteredWords();
   if (words.length === 0) return;
 
@@ -412,6 +453,11 @@ function renderCurrentVocabWord() {
   document.getElementById('vocab-example').innerText = `"${current.example}"`;
   document.getElementById('vocab-counter').innerText = `${state.vocabIndex + 1} / ${words.length}`;
   document.getElementById('vocab-level-chip').innerText = current.level;
+
+  const topicTag = document.getElementById('vocab-topic-tag');
+  if (topicTag) {
+    topicTag.innerText = current.topic || `${current.level} Mavzusi`;
+  }
 }
 
 function prevVocabWord() {
@@ -433,19 +479,77 @@ function markWordLearned() {
   nextVocabWord();
 }
 
-function playCurrentWordAudio() {
+function playWordAudio(wordText, buttonEl = null) {
+  if (!wordText) return;
   triggerHaptic('medium');
+
+  const btn = buttonEl || document.getElementById('btn-speak-vocab');
+  if (btn) btn.classList.add('playing');
+
+  const cleanWord = encodeURIComponent(wordText.trim().replace(/[^a-zA-Z\s-]/g, ''));
+  const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${cleanWord}`;
+  const dictTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/en/${cleanWord.toLowerCase()}-us.mp3`;
+
+  const audio = new Audio();
+  let finished = false;
+
+  const cleanup = () => {
+    if (!finished) {
+      finished = true;
+      if (btn) btn.classList.remove('playing');
+    }
+  };
+
+  audio.onended = cleanup;
+  audio.onerror = () => {
+    // Try secondary dictionary audio
+    const secondaryAudio = new Audio(dictTtsUrl);
+    secondaryAudio.onended = cleanup;
+    secondaryAudio.onerror = () => {
+      // Fallback to SpeechSynthesis
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(wordText);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85;
+        utterance.onend = cleanup;
+        utterance.onerror = cleanup;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        cleanup();
+      }
+    };
+    secondaryAudio.play().catch(() => {
+      // If secondary audio fails to play, speech synth fallback
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(wordText);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85;
+        utterance.onend = cleanup;
+        utterance.onerror = cleanup;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        cleanup();
+      }
+    });
+  };
+
+  audio.src = googleTtsUrl;
+  audio.play().catch(err => {
+    console.log("Direct play catch, trying fallback:", err);
+    audio.onerror();
+  });
+
+  // Safety timer to remove animation
+  setTimeout(cleanup, 2500);
+}
+
+function playCurrentWordAudio() {
   const words = getFilteredWords();
   const current = words[state.vocabIndex];
   if (!current) return;
-
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(current.word);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.85;
-    window.speechSynthesis.speak(utterance);
-  }
+  playWordAudio(current.word, document.getElementById('btn-speak-vocab'));
 }
 
 function startVocabSpecificQuiz() {
@@ -527,15 +631,51 @@ function startSpeakingRecord() {
   state.isRecording = true;
   state.recordSeconds = 0;
   state.spokenText = "";
+  state.audioChunks = [];
 
   const btn = document.getElementById('mic-toggle-btn');
   const status = document.getElementById('recording-status');
   const timerEl = document.getElementById('recording-timer');
   const feedbackCard = document.getElementById('speaking-ai-feedback-card');
+  const playerBox = document.getElementById('student-voice-playback-box');
 
   if (btn) btn.classList.add('recording');
   if (status) status.innerText = "Tinglamoqda... Gapiring (ingliz tilida)";
   if (feedbackCard) feedbackCard.style.display = 'none';
+  if (playerBox) playerBox.style.display = 'none';
+
+  // Request microphone and start MediaRecorder for student playback
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      state.mediaStream = stream;
+      try {
+        state.mediaRecorder = new MediaRecorder(stream);
+        state.mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) state.audioChunks.push(e.data);
+        };
+        state.mediaRecorder.onstop = () => {
+          if (state.audioChunks.length > 0) {
+            const blob = new Blob(state.audioChunks, { type: 'audio/webm' });
+            state.recordedAudioUrl = URL.createObjectURL(blob);
+            const player = document.getElementById('student-voice-audio');
+            const box = document.getElementById('student-voice-playback-box');
+            if (player && box) {
+              player.src = state.recordedAudioUrl;
+              box.style.display = 'block';
+            }
+          }
+          if (state.mediaStream) {
+            state.mediaStream.getTracks().forEach(t => t.stop());
+          }
+        };
+        state.mediaRecorder.start();
+      } catch (err) {
+        console.log("MediaRecorder init note:", err);
+      }
+    }).catch(err => {
+      console.log("Microphone access note:", err);
+    });
+  }
 
   state.recordInterval = setInterval(() => {
     state.recordSeconds++;
@@ -564,6 +704,12 @@ function stopSpeakingRecord() {
   if (btn) btn.classList.remove('recording');
   if (status) status.innerText = "Audio tahlil qilinmoqda (ChatGPT AI)... ⏳";
 
+  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+    try {
+      state.mediaRecorder.stop();
+    } catch (e) {}
+  }
+
   if (state.recognition) {
     try {
       state.recognition.stop();
@@ -575,11 +721,7 @@ function stopSpeakingRecord() {
 }
 
 async function analyzeSpeakingTranscript() {
-  let userText = state.spokenText;
-  if (!userText || userText.length < 5) {
-    // Provide realistic simulation sample if browser mic was muted or not granted
-    userText = "I usually practice English every day because I want to get high band in exam.";
-  }
+  let userText = (state.spokenText || "").trim();
 
   const promptTitle = document.getElementById('speaking-prompt-title')?.innerText || "Speaking";
 
@@ -597,23 +739,83 @@ async function analyzeSpeakingTranscript() {
     const feedback = await res.json();
     renderSpeakingAIFeedback(feedback);
   } catch (e) {
-    // Fallback client-side evaluator
-    renderSpeakingAIFeedback({
-      score: 82,
-      band: "6.5 - 7.0",
-      transcription: userText,
-      word_count: userText.split(' ').length,
-      has_error: true,
-      grammar_errors: [
-        {
-          original: "get high band in exam",
-          corrected: "get a high band in the exam",
-          reason_uz: "Sanaladigan birlik otlar ('band', 'exam') oldidan noaniq yoki aniq artikllar (a, the) qo'yilishi kerak."
-        }
-      ],
-      pronunciation_tip: "Tovushlarni aniq va ravon talaffuz qiling. Intonatsiyaga e'tibor bering.",
-      feedback_uz: "Juda yaxshi! Fikringizni ifodalash ravon, ammo gapda artikllarga e'tibor qarating."
-    });
+    // Client-side realistic evaluator
+    const words = userText.split(/\s+/).filter(Boolean);
+    const wc = words.length;
+
+    if (wc === 0) {
+      renderSpeakingAIFeedback({
+        score: 25,
+        band: "2.5 - 3.0",
+        status: "poor",
+        transcription: "Nutq aniqlanmadi (ovoz eshitilmadi)",
+        word_count: 0,
+        has_error: true,
+        grammar_errors: [{
+          original: "-",
+          corrected: "Iltimos, mikrofonni yoqib ovoz chiqarib gapiring",
+          reason_uz: "Ovoz aniqlanmadi yoki mikrofon ruxsati berilmagan."
+        }],
+        pronunciation_tip: "❌ Ovoz aniqlanmadi. Qaytadan urinib ko'ring.",
+        feedback_uz: "Birorta ham so'z eshitilmadi. Mikrofon tugmasini bosib, balandroq gapiring."
+      });
+    } else if (wc < 4) {
+      renderSpeakingAIFeedback({
+        score: 40,
+        band: "3.5 - 4.0",
+        status: "poor",
+        transcription: userText,
+        word_count: wc,
+        has_error: true,
+        grammar_errors: [{
+          original: userText,
+          corrected: "Mavzu bo'yicha to'liq gap tuzing (Subject + Verb + Object)",
+          reason_uz: "Nutq juda qisqa bo'lgani sababli to'liq baholab bo'lmadi."
+        }],
+        pronunciation_tip: "⚠️ Qisqa ibora. Kamida 2-3 ta to'liq gap tuzish tavsiya etiladi.",
+        feedback_uz: `Siz atigi ${wc} ta so'z aytdingiz ('${userText}'). ChatGPT tahlili uchun to'liqroq gapiring!`
+      });
+    } else {
+      let score = 72;
+      let status = "warning";
+      let band = "5.5 - 6.0";
+      let grammarErrors = [];
+
+      const lower = userText.toLowerCase();
+      if (lower.includes("he go") || lower.includes("she go")) {
+        grammarErrors.push({ original: "he/she go", corrected: "he/she goes", reason_uz: "Present Simple 3-shaxsda fe'lga -s/es qo'shiladi." });
+      }
+      if (lower.includes("i are")) {
+        grammarErrors.push({ original: "I are", corrected: "I am", reason_uz: "I olmoshi bilan 'am' ishlatiladi." });
+      }
+      if (lower.includes("yesterday i go")) {
+        grammarErrors.push({ original: "yesterday I go", corrected: "yesterday I went", reason_uz: "O'tgan zamon (Past Simple) uchun went kerak." });
+      }
+
+      if (grammarErrors.length > 0) {
+        score = 55;
+        status = "poor";
+        band = "4.5 - 5.0";
+      } else if (wc >= 12) {
+        score = 86;
+        status = "good";
+        band = "6.5 - 7.0";
+      }
+
+      renderSpeakingAIFeedback({
+        score: score,
+        band: band,
+        status: status,
+        transcription: userText,
+        word_count: wc,
+        has_error: grammarErrors.length > 0,
+        grammar_errors: grammarErrors,
+        pronunciation_tip: grammarErrors.length > 0 ? "⚠️ Intonatsiya va so'z urg'ulariga e'tibor qarating." : "✅ Aniq va tushunarli talaffuz.",
+        feedback_uz: grammarErrors.length > 0
+          ? "Nutqingizda xatolar aniqlandi. Xatolarni to'g'rilab, qayta mashq qiling!"
+          : "Juda yaxshi! Fikr ravon ifodalangan."
+      });
+    }
   }
 
   const status = document.getElementById('recording-status');
@@ -624,9 +826,35 @@ function renderSpeakingAIFeedback(feedback) {
   const card = document.getElementById('speaking-ai-feedback-card');
   if (!card) return;
 
-  document.getElementById('feedback-score-num').innerText = feedback.score;
+  const scoreNum = document.getElementById('feedback-score-num');
+  const scoreCircle = document.getElementById('feedback-score-circle');
+  if (scoreNum) scoreNum.innerText = feedback.score;
+
+  const status = feedback.status || (feedback.score < 60 ? 'poor' : feedback.score < 75 ? 'warning' : 'good');
+  if (scoreCircle) {
+    scoreCircle.className = `score-badge-circle ${status}`;
+  }
+
+  const statusBanner = document.getElementById('feedback-status-banner');
+  const statusIcon = document.getElementById('feedback-status-icon');
+  const statusText = document.getElementById('feedback-status-text');
+  if (statusBanner) {
+    statusBanner.className = `feedback-status-banner ${status}`;
+    statusBanner.style.display = 'flex';
+    if (status === 'poor') {
+      if (statusIcon) statusIcon.innerText = '❌';
+      if (statusText) statusText.innerText = "Xatolar ko'p yoki qoniqarsiz — Qaytadan mashq qiling!";
+    } else if (status === 'warning') {
+      if (statusIcon) statusIcon.innerText = '⚠️';
+      if (statusText) statusText.innerText = "O'rtacha natija — Yaxshilash kerak";
+    } else {
+      if (statusIcon) statusIcon.innerText = '✅';
+      if (statusText) statusText.innerText = "Ajoyib natija! Ravon va aniq nutq";
+    }
+  }
+
   document.getElementById('feedback-band').innerText = feedback.band;
-  document.getElementById('feedback-words-count').innerText = `${feedback.word_count || 24} ta`;
+  document.getElementById('feedback-words-count').innerText = `${feedback.word_count || 0} ta`;
   document.getElementById('feedback-transcription-text').innerText = `"${feedback.transcription}"`;
   document.getElementById('feedback-pronunciation-tip').innerText = feedback.pronunciation_tip;
   document.getElementById('feedback-coach-text').innerText = feedback.feedback_uz;
@@ -635,18 +863,19 @@ function renderSpeakingAIFeedback(feedback) {
   if (errList) {
     if (feedback.grammar_errors && feedback.grammar_errors.length > 0) {
       errList.innerHTML = feedback.grammar_errors.map(err => `
-        <div class="feedback-error-item">
-          <div><span class="error-orig">${err.original}</span> ➔ <span class="error-corr">${err.corrected}</span></div>
+        <div class="feedback-error-item" style="border-left: 3px solid #ef4444; padding-left: 8px; margin-bottom: 8px;">
+          <div><span class="error-orig" style="color: #fca5a5; text-decoration: line-through;">${err.original}</span> ➔ <span class="error-corr" style="color: #86efac; font-weight: bold;">${err.corrected}</span></div>
           <div class="error-why">💡 ${err.reason_uz}</div>
         </div>
       `).join('');
+    } else if (feedback.score < 60) {
+      errList.innerHTML = `<div style="color: #fca5a5; font-size: 13px;">❌ Nutq hajmi yetarli bo'lmadi yoki jiddiy xatolar aniqlandi.</div>`;
     } else {
       errList.innerHTML = `<div style="color: #86efac; font-size: 13px;">✅ Ajoyib! Grammatik xatolar topilmadi.</div>`;
     }
   }
 
   card.style.display = 'block';
-  // Update speaking skill in state
   state.user.skills.speaking = feedback.score;
 }
 
@@ -1366,6 +1595,7 @@ function switchTeacherTab(tabId, btn) {
   if (tabId === 'tab-cms') renderCmsFormFields();
   if (tabId === 'tab-meetings') loadTeacherMeetings();
   if (tabId === 'tab-marking') loadTeacherSubmissions();
+  if (tabId === 'tab-avatar') loadSavedAvatar();
 }
 
 function loadTeacherPortalData() {
@@ -1432,6 +1662,7 @@ function renderCmsFormFields() {
 
   if (cat === 'vocab') {
     container.innerHTML = `
+      <div class="form-group"><label class="form-label">Dars / Mavzu Nomi:</label><input id="cms-v-topic" class="form-input" placeholder="Masalan: 3-dars: Texnologiya va Internet"></div>
       <div class="form-group"><label class="form-label">Inglizcha So'z:</label><input id="cms-v-word" class="form-input" placeholder="Masalan: comprehensive"></div>
       <div class="form-group"><label class="form-label">Fonetika (IPA):</label><input id="cms-v-ph" class="form-input" placeholder="/ˌkɒm.prɪˈhen.sɪv/"></div>
       <div class="form-group"><label class="form-label">O'zbekcha Tarjimasi:</label><input id="cms-v-uz" class="form-input" placeholder="har tomonlama, to'liq"></div>
@@ -1494,15 +1725,18 @@ async function submitCmsContent() {
 
   if (cat === 'vocab') {
     title = document.getElementById('cms-v-word')?.value.trim();
+    const topic = document.getElementById('cms-v-topic')?.value.trim() || `${level} Mavzusi`;
     payload = {
       word: title,
-      phonetics: document.getElementById('cms-v-ph')?.value.trim(),
+      topic: topic,
+      phonetics: document.getElementById('cms-v-ph')?.value.trim() || "/.../",
       translation_uz: document.getElementById('cms-v-uz')?.value.trim(),
       definition: document.getElementById('cms-v-def')?.value.trim(),
       example: document.getElementById('cms-v-ex')?.value.trim()
     };
     // Add to local dataset immediately
     window.APP_DATA.words.push({ id: Date.now(), level, partOfSpeech: "noun", ...payload });
+    updateVocabTopicDropdown();
   } else if (cat === 'quiz') {
     title = document.getElementById('cms-q-text')?.value.trim();
     const opts = document.getElementById('cms-q-opts')?.value.split(',').map(s => s.trim());
@@ -1649,3 +1883,124 @@ async function gradeStudentSubmission(id) {
   alert("Topshiriq baholandi va o'quvchi profiliga saqlandi ✨");
   loadTeacherSubmissions();
 }
+
+// =========================================================================
+// 10. COURSE MATERIALS SYNC & TEACHER AVATAR MANAGER
+// =========================================================================
+async function fetchTeacherMaterials() {
+  try {
+    const res = await fetch('/api/teacher/content');
+    const materials = await res.json();
+    if (materials && Array.isArray(materials)) {
+      materials.forEach(m => {
+        if (m.category === 'vocab' && m.data && m.data.word) {
+          const exists = window.APP_DATA.words.some(w => w.word.toLowerCase() === m.data.word.toLowerCase());
+          if (!exists) {
+            window.APP_DATA.words.push({
+              id: m.id,
+              level: m.level || 'B1',
+              partOfSpeech: m.data.partOfSpeech || 'noun',
+              word: m.data.word,
+              topic: m.data.topic || m.title || '1-mavzu',
+              phonetics: m.data.phonetics || '/.../',
+              translation_uz: m.data.translation_uz || '',
+              definition: m.data.definition || '',
+              example: m.data.example || ''
+            });
+          }
+        }
+      });
+      updateVocabTopicDropdown();
+    }
+  } catch (e) {}
+}
+
+async function loadSavedAvatar() {
+  const localAvatar = localStorage.getItem('umar_tutor_avatar');
+  if (localAvatar) {
+    applyAvatarToUI(localAvatar);
+  }
+  try {
+    const res = await fetch('/api/teacher/avatar');
+    const data = await res.json();
+    if (data.avatar_url && data.avatar_url !== 'assets/robot.svg') {
+      applyAvatarToUI(data.avatar_url);
+      localStorage.setItem('umar_tutor_avatar', data.avatar_url);
+    }
+  } catch (e) {}
+}
+
+function applyAvatarToUI(avatarUrl) {
+  if (!avatarUrl) return;
+  document.querySelectorAll('.teacher-avatar-target').forEach(img => {
+    img.src = avatarUrl;
+  });
+  const preview = document.getElementById('teacher-avatar-preview');
+  if (preview) preview.src = avatarUrl;
+}
+
+function handleAvatarFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64Data = e.target.result;
+    applyAvatarToUI(base64Data);
+    localStorage.setItem('umar_tutor_avatar', base64Data);
+
+    try {
+      const res = await fetch('/api/teacher/upload-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar_data: base64Data })
+      });
+      const data = await res.json();
+      if (data.success && data.avatar_url) {
+        applyAvatarToUI(data.avatar_url);
+        localStorage.setItem('umar_tutor_avatar', data.avatar_url);
+      }
+      alert("✅ Admin surati muvaffaqiyatli o'rnatildi va saqlandi!");
+    } catch (err) {
+      alert("✅ Surat saqlandi!");
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveAvatarFromUrl() {
+  const input = document.getElementById('teacher-avatar-url-input');
+  const url = input?.value?.trim();
+  if (!url) {
+    alert("Iltimos, rasm havolasini (URL) kiriting!");
+    return;
+  }
+  applyAvatarToUI(url);
+  localStorage.setItem('umar_tutor_avatar', url);
+
+  try {
+    await fetch('/api/teacher/upload-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_data: url })
+    });
+    alert("✅ Yangi surat havolasi saqlandi!");
+  } catch (e) {
+    alert("✅ Surat saqlandi!");
+  }
+}
+
+async function resetAvatarToDefault() {
+  const defaultRobot = 'assets/robot.svg';
+  applyAvatarToUI(defaultRobot);
+  localStorage.removeItem('umar_tutor_avatar');
+  try {
+    await fetch('/api/teacher/upload-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_data: 'reset' })
+    });
+    alert("Robot rasmi qaytarildi!");
+  } catch (e) {}
+}
+

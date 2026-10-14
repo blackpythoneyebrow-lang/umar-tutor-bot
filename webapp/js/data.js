@@ -18,6 +18,7 @@ window.APP_DATA = {
       phonetics: "/ˈwel.kəm/",
       partOfSpeech: "noun / verb",
       level: "Starter",
+      topic: "1-mavzu: Salomlashish & Tanishuv",
       definition: "Used to greet someone arriving in a polite way.",
       example: "Welcome to our English lesson!",
       translation_uz: "xush kelibsiz, kutib olmoq"
@@ -28,6 +29,7 @@ window.APP_DATA = {
       phonetics: "/ˈfæm.əl.i/",
       partOfSpeech: "noun",
       level: "Starter",
+      topic: "2-mavzu: Oila va Uy",
       definition: "A group of people related to each other, like parents and children.",
       example: "I love spending weekend evenings with my family.",
       translation_uz: "oila, xonadon"
@@ -38,9 +40,21 @@ window.APP_DATA = {
       phonetics: "/ˈbjuː.tɪ.fəl/",
       partOfSpeech: "adjective",
       level: "Starter",
+      topic: "3-mavzu: Sifatlar va Ta'rif",
       definition: "Very pleasant to look at or hear.",
       example: "Samarkand is a beautiful ancient city.",
       translation_uz: "chiroyli, go'zal"
+    },
+    {
+      id: 104,
+      word: "friend",
+      phonetics: "/frend/",
+      partOfSpeech: "noun",
+      level: "Starter",
+      topic: "1-mavzu: Salomlashish & Tanishuv",
+      definition: "A person you know well and like a lot.",
+      example: "He is my best friend from school.",
+      translation_uz: "do'st, o'rtoq"
     },
     // A1
     {
@@ -49,6 +63,7 @@ window.APP_DATA = {
       phonetics: "/ˈhæb.ɪt/",
       partOfSpeech: "noun",
       level: "A1",
+      topic: "1-mavzu: Kundalik Odatlar",
       definition: "Something you do regularly and often without thinking about it.",
       example: "Reading English every morning is a great habit.",
       translation_uz: "odat, ko'nikma"
@@ -59,6 +74,7 @@ window.APP_DATA = {
       phonetics: "/ˈdʒɜː.ni/",
       partOfSpeech: "noun",
       level: "A1",
+      topic: "2-mavzu: Sayohat va Shaharlar",
       definition: "An act of traveling from one place to another.",
       example: "They went on a long journey across the mountains.",
       translation_uz: "sayohat, uzoq yo'l"
@@ -69,9 +85,21 @@ window.APP_DATA = {
       phonetics: "/dɪˈlɪʃ.əs/",
       partOfSpeech: "adjective",
       level: "A1",
+      topic: "3-mavzu: Taomlar va Restoran",
       definition: "Having a very pleasant taste or smell.",
       example: "Traditional Uzbek plov is absolutely delicious.",
       translation_uz: "mazali, totli"
+    },
+    {
+      id: 105,
+      word: "explore",
+      phonetics: "/ɪkˈsplɔːr/",
+      partOfSpeech: "verb",
+      level: "A1",
+      topic: "2-mavzu: Sayohat va Shaharlar",
+      definition: "To travel around a new place to learn about it.",
+      example: "We explored historic streets and bazaars.",
+      translation_uz: "tadqiq qilmoq, aylanib ko'rmoq"
     },
     // A2
     {
@@ -80,6 +108,7 @@ window.APP_DATA = {
       phonetics: "/ˈkɒn.fɪ.dənt/",
       partOfSpeech: "adjective",
       level: "A2",
+      topic: "1-mavzu: Shaxsiyat va Xarakter",
       definition: "Feeling sure about your own abilities and success.",
       example: "You will become more confident with daily speaking practice.",
       translation_uz: "o'ziga ishongan, dadil"
@@ -90,9 +119,21 @@ window.APP_DATA = {
       phonetics: "/əˈtʃiːv/",
       partOfSpeech: "verb",
       level: "A2",
+      topic: "2-mavzu: Maqsad va Yutuqlar",
       definition: "To succeed in reaching a goal through hard effort.",
       example: "Set clear goals if you want to achieve high results.",
       translation_uz: "erishmoq, zabt etmoq"
+    },
+    {
+      id: 106,
+      word: "patience",
+      phonetics: "/ˈpeɪ.ʃəns/",
+      partOfSpeech: "noun",
+      level: "A2",
+      topic: "1-mavzu: Shaxsiyat va Xarakter",
+      definition: "The ability to wait or continue calmly when things take time.",
+      example: "Learning a new language requires patience and consistency.",
+      translation_uz: "sabr-toqat, bardosh"
     },
     // B1
     {
@@ -101,6 +142,7 @@ window.APP_DATA = {
       phonetics: "/ˌɒp.əˈtjuː.nə.ti/",
       partOfSpeech: "noun",
       level: "B1",
+      topic: "1-mavzu: Karyera va Ish Imkoniyatlari",
       definition: "A set of circumstances that makes it possible to do something.",
       example: "Studying English gives you international job opportunities.",
       translation_uz: "imkoniyat, qulay vaziyat"
@@ -111,9 +153,21 @@ window.APP_DATA = {
       phonetics: "/ˈfluː.ən.si/",
       partOfSpeech: "noun",
       level: "B1",
+      topic: "2-mavzu: Til O'rganish & Muloqot",
       definition: "The ability to speak or write a language easily, well and quickly.",
       example: "Daily conversation practice leads to true fluency.",
       translation_uz: "ravonlik, erkin so'zlashuv"
+    },
+    {
+      id: 107,
+      word: "profession",
+      phonetics: "/prəˈfeʃ.ən/",
+      partOfSpeech: "noun",
+      level: "B1",
+      topic: "1-mavzu: Karyera va Ish Imkoniyatlari",
+      definition: "A type of job that requires advanced education or skill.",
+      example: "Teaching is one of the most respected professions.",
+      translation_uz: "kasb, soha"
     },
     // B2
     {
@@ -122,6 +176,7 @@ window.APP_DATA = {
       phonetics: "/ˌpɜː.sɪˈvɪə.rəns/",
       partOfSpeech: "noun",
       level: "B2",
+      topic: "1-mavzu: Ruhiyat va Matonat",
       definition: "Continued effort to do something despite difficulties or delays.",
       example: "Through perseverance and determination, she passed the exam with top marks.",
       translation_uz: "matonat, sabot, qat'iyat"
@@ -132,9 +187,21 @@ window.APP_DATA = {
       phonetics: "/rɪˈzɪl.jənt/",
       partOfSpeech: "adjective",
       level: "B2",
+      topic: "2-mavzu: Stress va Moslashuvchanlik",
       definition: "Able to recover quickly from difficult conditions or stress.",
       example: "A resilient mindset helps students overcome setbacks.",
       translation_uz: "chidamli, bukilmas, bardoshli"
+    },
+    {
+      id: 108,
+      word: "adaptable",
+      phonetics: "/əˈdæp.tə.bəl/",
+      partOfSpeech: "adjective",
+      level: "B2",
+      topic: "2-mavzu: Stress va Moslashuvchanlik",
+      definition: "Able to change easily to suit new situations.",
+      example: "Successful professionals are highly adaptable to changing environments.",
+      translation_uz: "moslashuvchan, epchil"
     },
     // IELTS
     {
@@ -143,6 +210,7 @@ window.APP_DATA = {
       phonetics: "/juːˈbɪk.wɪ.təs/",
       partOfSpeech: "adjective",
       level: "IELTS",
+      topic: "1-mavzu: Zamonaviy Texnologiyalar",
       definition: "Present, appearing, or found everywhere simultaneously.",
       example: "Smartphones have become ubiquitous in modern urban societies.",
       translation_uz: "hamma yerda mavjud, keng tarqalgan"
@@ -153,6 +221,7 @@ window.APP_DATA = {
       phonetics: "/ɪɡˈzæs.ə.beɪt/",
       partOfSpeech: "verb",
       level: "IELTS",
+      topic: "2-mavzu: Ekologiya va Iqlim Muammolari",
       definition: "To make a problem, situation or feeling worse.",
       example: "Rapid deforestation severely exacerbates global climate instability.",
       translation_uz: "og'irlashtirmoq, battar yomonlashtirmoq"
@@ -163,6 +232,7 @@ window.APP_DATA = {
       phonetics: "/ˈel.ə.kwənt/",
       partOfSpeech: "adjective",
       level: "IELTS",
+      topic: "3-mavzu: Notiqlik va Akademik Yozish",
       definition: "Fluent or persuasive in speaking or writing; highly expressive.",
       example: "Her eloquent essay received the highest score from the examiners.",
       translation_uz: "notiq, ta'sirchan, nozik so'zlovchi"

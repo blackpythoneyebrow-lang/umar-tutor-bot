@@ -21,7 +21,7 @@
     <header id="global-header" class="global-header">
       <div class="header-left" onclick="navigateScreen('screen-home')">
         <div class="bot-avatar-badge-sm">
-          <img src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 24px; height: 24px;">
+          <img class="teacher-avatar-target" src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 24px; height: 24px;">
         </div>
         <div class="header-title-box">
           <span class="header-app-name">Umar Tutor</span>
@@ -70,7 +70,7 @@
       </div>
 
       <div class="robot-mascot-wrapper">
-        <img src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 100%; height: 100%;">
+        <img class="teacher-avatar-target welcome-avatar-img" src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 100%; height: 100%;">
       </div>
 
       <div>
@@ -194,11 +194,21 @@
         <span id="vocab-counter" class="count-pill">1 / 5</span>
       </div>
 
+      <!-- Vocab Topic Filter Bar -->
+      <div class="vocab-topic-bar">
+        <span style="font-size: 14px;">📚</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Mavzu:</span>
+        <select id="vocab-topic-select" class="vocab-topic-select" onchange="onVocabTopicChange()">
+          <option value="all">Barcha dars mavzulari</option>
+        </select>
+      </div>
+
       <!-- Vocab Card -->
       <div class="vocab-flashcard">
+        <div id="vocab-topic-tag" class="vocab-topic-tag">1-mavzu</div>
         <div class="vocab-word-row">
           <h2 id="vocab-word" class="vocab-word-text">opportunity</h2>
-          <button id="btn-speak-vocab" class="audio-speaker-btn" onclick="playCurrentWordAudio()" title="Talaffuzni eshitish">
+          <button id="btn-speak-vocab" class="audio-speaker-btn" onclick="playCurrentWordAudio()" title="Haqiqiy audio talaffuz">
             🔊
           </button>
         </div>
@@ -289,17 +299,33 @@
         </div>
       </div>
 
+      <!-- Student Voice Playback Studio (Listen to your recorded speech) -->
+      <div id="student-voice-playback-box" class="student-playback-card" style="display: none;">
+        <div class="playback-header">
+          <span class="playback-icon">🎧</span>
+          <span class="playback-title">O'z ovozingizni tinglang:</span>
+        </div>
+        <audio id="student-voice-audio" controls class="student-audio-player"></audio>
+        <div class="playback-tip">Ovozingizni qayta tinglab, ravonlik va talaffuzni solishtiring</div>
+      </div>
+
       <!-- ChatGPT-Style Evaluative AI Feedback Card -->
       <div id="speaking-ai-feedback-card" class="ai-feedback-card" style="display: none;">
         <div class="feedback-card-header">
           <div>
             <div class="feedback-card-title">🤖 ChatGPT AI Tahlili</div>
-            <div class="feedback-card-sub">Nutqingiz professional darajada baholandi</div>
+            <div class="feedback-card-sub">Nutqingiz xolis baholandi</div>
           </div>
-          <div class="score-badge-circle">
+          <div id="feedback-score-circle" class="score-badge-circle">
             <span id="feedback-score-num" class="score-num">84</span>
             <span class="score-label">BALL</span>
           </div>
+        </div>
+
+        <!-- Dynamic AI Feedback Status Banner (Good, Warning, or Poor) -->
+        <div id="feedback-status-banner" class="feedback-status-banner warning">
+          <span id="feedback-status-icon">⚠️</span>
+          <span id="feedback-status-text">Xatolar tahlili</span>
         </div>
 
         <!-- Band & Fluency row -->
@@ -781,6 +807,7 @@
         <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-cms', this)">✍️ CMS Kontent</button>
         <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-meetings', this)">🔴 Darslar</button>
         <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-marking', this)">📝 Baholash</button>
+        <button class="teacher-tab-btn" onclick="switchTeacherTab('tab-avatar', this)">📷 Admin Surati</button>
       </div>
 
       <!-- TAB 1: ANALYTICS & ERROR LOGS -->
@@ -903,6 +930,35 @@
           </p>
           <div id="teacher-submissions-queue" class="submissions-queue-list">
             <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: ADMIN / TEACHER AVATAR MANAGER -->
+      <div id="tab-avatar" class="teacher-tab-pane">
+        <div class="teacher-avatar-manager-card">
+          <div class="avatar-manager-header">
+            <img id="teacher-avatar-preview" class="teacher-avatar-preview-img" src="assets/robot.svg" alt="Admin Surati">
+            <div>
+              <h4 style="font-size: 15px; font-weight: 700; color: #fff;">👨‍🏫 Admin / O'qituvchi Surati</h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                Robot rasmi o'rniga o'zingizning shaxsiy suratingizni joylang. Bu rasm bot ochilganda o'quvchilarga ko'rinadi!
+              </p>
+            </div>
+          </div>
+
+          <div class="avatar-upload-actions">
+            <input type="file" id="teacher-avatar-file-input" accept="image/*" style="display: none;" onchange="handleAvatarFileSelect(event)">
+            <button class="btn-primary" onclick="document.getElementById('teacher-avatar-file-input').click()">
+              📷 Galereyadan Surat Tanlash
+            </button>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <input type="text" id="teacher-avatar-url-input" class="form-input" placeholder="Yoki rasm havolasini (URL) kiriting">
+              <button class="btn-primary-sm" onclick="saveAvatarFromUrl()">Saqlash</button>
+            </div>
+            <button class="btn-secondary" style="font-size: 12px; margin-top: 4px;" onclick="resetAvatarToDefault()">
+              🔄 Standart Robot rasmini qaytarish
+            </button>
           </div>
         </div>
       </div>

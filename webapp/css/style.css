@@ -2050,3 +2050,177 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* Audio Speaker Playing Animation */
+.audio-speaker-btn.playing {
+  animation: audioPulse 0.6s infinite alternate;
+  background: linear-gradient(135deg, #00b4d8, #0077b6) !important;
+  box-shadow: 0 0 18px rgba(0, 180, 216, 0.9) !important;
+}
+
+@keyframes audioPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.18); }
+}
+
+/* Vocab Topic Filter Bar & Tag */
+.vocab-topic-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.vocab-topic-select {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.vocab-topic-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+/* Student Voice Playback Studio */
+.student-playback-card {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin: 12px 0;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.playback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.playback-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.student-audio-player {
+  width: 100%;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.playback-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Dynamic AI Feedback Status Banners */
+.feedback-status-banner {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-status-banner.good {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid #22c55e;
+}
+
+.feedback-status-banner.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde047;
+  border: 1px solid #f59e0b;
+}
+
+.feedback-status-banner.poor {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+.score-badge-circle.good {
+  background: #22c55e !important;
+}
+
+.score-badge-circle.warning {
+  background: #f59e0b !important;
+}
+
+.score-badge-circle.poor {
+  background: #ef4444 !important;
+}
+
+/* Admin / Teacher Avatar Management */
+.teacher-avatar-target {
+  object-fit: cover;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.welcome-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 28px !important;
+  box-shadow: 0 10px 30px rgba(0, 180, 216, 0.3);
+  border: 2px solid rgba(56, 189, 248, 0.4);
+}
+
+.teacher-avatar-manager-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.avatar-manager-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.teacher-avatar-preview-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 16px var(--primary-glow);
+  flex-shrink: 0;
+}
+
+.avatar-upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
