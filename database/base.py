@@ -30,7 +30,8 @@ def get_engine(db_url: str):
 def get_session_maker():
     global async_session
     if async_session is None:
-        raise RuntimeError("Database engine is not initialized yet. Call get_engine first.")
+        from config import settings
+        get_engine(settings.DATABASE_URL)
     return async_session
 
 async def init_db(db_url: str):

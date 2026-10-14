@@ -6,11 +6,9 @@ services:
     startCommand: python main.py
     envVars:
       - key: BOT_TOKEN
-        sync: false
+        value: "8857569388:AAFYJKztG3v4fnYlYA7lwhyVi8GpXW4O6f8"
       - key: ADMIN_IDS
-        sync: false
-      - key: WEBAPP_URL
-        sync: false
+        value: "786373932"
       - key: USE_WEBHOOK
         value: "False"
       - key: PORT

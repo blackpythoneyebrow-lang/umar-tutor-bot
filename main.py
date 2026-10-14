@@ -41,10 +41,17 @@ WEBAPP_DIR = Path(__file__).parent / "webapp"
 tunnel_process = None
 
 def find_available_port(start_port: int = 8080, max_attempts: int = 20) -> int:
-    """Finds an available TCP port to prevent Errno 10048 port collision."""
+    """Finds an available TCP port. Directly honors PORT in container environments like Render."""
+    if os.environ.get("RENDER") or os.environ.get("PORT"):
+        try:
+            return int(os.environ.get("PORT", start_port))
+        except (ValueError, TypeError):
+            return start_port
+
     for port in range(start_port, start_port + max_attempts):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(('0.0.0.0', port))
                 return port
             except OSError:
@@ -727,18 +734,21 @@ async def configure_bot_services():
     await setup_bot_and_dispatcher()
 
     # Pre-seed default live meetings if none exist
-    session_maker = get_session_maker()
-    async with session_maker() as session:
-        active_m = await crud.get_active_live_meetings(session)
-        if not active_m:
-            await crud.create_live_meeting(
-                session=session,
-                title="🔴 IELTS Speaking Band 7.5+ Masterclass",
-                level="B2 - IELTS",
-                datetime_str="Bugun, 20:30",
-                meeting_link="https://t.me/umar_tutor_bot",
-                platform="Telegram Video Dars"
-            )
+    try:
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            active_m = await crud.get_active_live_meetings(session)
+            if not active_m:
+                await crud.create_live_meeting(
+                    session=session,
+                    title="🔴 IELTS Speaking Band 7.5+ Masterclass",
+                    level="B2 - IELTS",
+                    datetime_str="Bugun, 20:30",
+                    meeting_link="https://t.me/umar_tutor_bot",
+                    platform="Telegram Video Dars"
+                )
+    except Exception as e:
+        logger.warning(f"Note seeding meetings: {e}")
 
     # Auto-detect Render public URL if running on Render
     if not settings.WEBAPP_URL or not settings.WEBAPP_URL.startswith("https://"):
@@ -814,25 +824,41 @@ async def run_polling_mode():
     actual_port = find_available_port(settings.PORT)
     settings.PORT = actual_port
 
-    # Start aiohttp server
+    # Start aiohttp server immediately so health checks pass
     app = create_web_application()
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host=settings.HOST, port=actual_port)
     await site.start()
-    logger.info(f"[ONLINE] Umar Tutor Web App is live on http://localhost:{actual_port}")
-
-    await configure_bot_services()
-    await bot.delete_webhook(drop_pending_updates=True)
+    logger.info(f"[ONLINE] Umar Tutor Web App is live on http://{settings.HOST}:{actual_port}")
 
     try:
+        await configure_bot_services()
+    except Exception as e:
+        logger.error(f"Error configuring bot services: {e}")
+
+    try:
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+        except Exception as e:
+            logger.warning(f"Note dropping webhook: {e}")
+
         logger.info(f"Starting Telegram Long-Polling... (WebApp URL: {settings.WEBAPP_URL})")
         print("\n" + "=" * 55)
         print("🎉 Umar Tutor Bot va Mini App ishga tushdi!")
         print("📱 Telegram Bot: @umar_tutor_bot")
         print(f"🌐 Jonli Mini App URL: {settings.WEBAPP_URL}")
         print("=" * 55 + "\n")
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+
+        while True:
+            try:
+                await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+                break
+            except Exception as e:
+                logger.error(f"Telegram polling error: {e}. Retrying in 10s...")
+                await asyncio.sleep(10)
+    except asyncio.CancelledError:
+        pass
     finally:
         await runner.cleanup()
         await on_shutdown()

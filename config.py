@@ -9,8 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Telegram Bot
-    BOT_TOKEN: str = "YOUR_BOT_TOKEN_HERE"
-    ADMIN_IDS: Union[str, List[int]] = ""
+    BOT_TOKEN: str = "8857569388:AAFYJKztG3v4fnYlYA7lwhyVi8GpXW4O6f8"
+    ADMIN_IDS: Union[str, List[int]] = "786373932"
 
     # Database
     DATABASE_PATH: str = "umar_tutor.db"
