@@ -120,6 +120,54 @@ async def get_user_by_access_code(session: AsyncSession, code: str) -> Optional[
         user = res2.scalar_one_or_none()
     return user
 
+async def create_student_account(
+    session: AsyncSession,
+    full_name: str,
+    level: str = "Starter",
+    custom_code: Optional[str] = None,
+    telegram_id: Optional[int] = None
+) -> User:
+    """Create a new dedicated student account with personal code."""
+    code = custom_code.strip().upper() if custom_code and custom_code.strip() else None
+    if not code:
+        code = f"STU-{random.randint(1000, 9999)}"
+
+    # Ensure unique code
+    existing = await get_user_by_access_code(session, code)
+    if existing:
+        if telegram_id and existing.telegram_id == telegram_id:
+            existing.full_name = full_name
+            existing.level = level
+            await session.commit()
+            return existing
+        code = f"STU-{random.randint(1000, 9999)}"
+
+    if telegram_id:
+        existing_tg = await get_user_by_telegram_id(session, telegram_id)
+        if existing_tg:
+            existing_tg.full_name = full_name
+            existing_tg.level = level
+            existing_tg.access_code = code
+            await session.commit()
+            return existing_tg
+
+    user = User(
+        telegram_id=telegram_id or random.randint(100000000, 999999999),
+        full_name=full_name,
+        role="student",
+        access_code=code,
+        level=level,
+        streak_days=1,
+        last_active_date=datetime.utcnow(),
+        skill_percentages=json.dumps(DEFAULT_SKILLS),
+        weak_points=json.dumps(DEFAULT_WEAK_POINTS),
+        is_admin=False
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
 async def update_user_activity_and_streak(session: AsyncSession, telegram_id: int) -> Optional[User]:
     """Updates user last active timestamp and streak days."""
     user = await get_user_by_telegram_id(session, telegram_id)

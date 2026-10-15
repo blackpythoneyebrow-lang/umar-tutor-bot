@@ -7,10 +7,22 @@ from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# ==============================================================================
+# 👑 ADMIN TELEGRAM ID RO'YXATI (ADMIN LIST)
+# Bu yerga 1 ta, 2 ta, 3 ta yoki istalgancha admin Telegram ID sini yozishingiz mumkin!
+# Masalan: [786373932] yoki [786373932, 123456789, 987654321]
+# Ushbu ID egalari botga yoki Mini App'ga kirganda avtomatik O'qituvchi/Admin huquqini oladi!
+# ==============================================================================
+ADMIN_TELEGRAM_IDS = [
+    786373932,   # 1-Admin (Bosh admin)
+    8737899414,  # 2-Admin
+    2011411073,  # 3-Admin
+]
+
 class Settings(BaseSettings):
     # Telegram Bot
     BOT_TOKEN: str = "8857569388:AAFYJKztG3v4fnYlYA7lwhyVi8GpXW4O6f8"
-    ADMIN_IDS: Union[str, List[int]] = "786373932"
+    ADMIN_IDS: Union[str, List[int]] = ADMIN_TELEGRAM_IDS
 
     # Database
     DATABASE_PATH: str = "umar_tutor.db"
@@ -66,5 +78,17 @@ class Settings(BaseSettings):
             return v
         db_path = info.data.get("DATABASE_PATH", "umar_tutor.db")
         return f"sqlite+aiosqlite:///{db_path}"
+
+    def is_admin(self, telegram_id) -> bool:
+        """Check if a given telegram ID has admin privileges."""
+        if not telegram_id:
+            return False
+        try:
+            tid = int(telegram_id)
+            if isinstance(self.ADMIN_IDS, list):
+                return tid in self.ADMIN_IDS
+            return tid in [int(x.strip()) for x in str(self.ADMIN_IDS).split(",") if x.strip().isdigit()]
+        except (ValueError, TypeError):
+            return False
 
 settings = Settings()

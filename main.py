@@ -62,6 +62,70 @@ def find_available_port(start_port: int = 8080, max_attempts: int = 20) -> int:
 # REST API Handlers for Web App
 # =========================================================================
 
+async def api_auth_register(request: web.Request) -> web.Response:
+    """Handles new Student registration with name, level, and generates a personal access code."""
+    try:
+        data = await request.json()
+        full_name = str(data.get("full_name", "")).strip()
+        level = str(data.get("level", "Starter")).strip()
+        custom_code = str(data.get("code", "")).strip()
+        telegram_id = data.get("telegram_id")
+        if telegram_id:
+            try:
+                telegram_id = int(telegram_id)
+            except Exception:
+                telegram_id = None
+
+        if not full_name:
+            return web.json_response({
+                "success": False,
+                "message": "Iltimos, ism va familiyangizni kiriting!"
+            }, status=400)
+
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            user = await crud.create_student_account(
+                session=session,
+                full_name=full_name,
+                level=level,
+                custom_code=custom_code,
+                telegram_id=telegram_id
+            )
+
+            skills = crud.DEFAULT_SKILLS
+            if user.skill_percentages:
+                try:
+                    skills = json.loads(user.skill_percentages)
+                except Exception:
+                    pass
+            weak_points = crud.DEFAULT_WEAK_POINTS
+            if user.weak_points:
+                try:
+                    weak_points = json.loads(user.weak_points)
+                except Exception:
+                    pass
+
+            return web.json_response({
+                "success": True,
+                "role": "student",
+                "message": f"Muvaffaqiyatli ro'yxatdan o'tdingiz! Sizning shaxsiy kodingiz: {user.access_code}",
+                "user": {
+                    "id": user.id,
+                    "telegram_id": user.telegram_id,
+                    "full_name": user.full_name,
+                    "access_code": user.access_code,
+                    "level": user.level or "Starter",
+                    "streak_days": user.streak_days or 1,
+                    "skills": skills,
+                    "weak_points": weak_points,
+                    "is_admin": settings.is_admin(user.telegram_id)
+                }
+            })
+    except Exception as e:
+        logger.error(f"Error in api_auth_register: {e}")
+        return web.json_response({"success": False, "message": str(e)}, status=500)
+
+
 async def api_auth_login(request: web.Request) -> web.Response:
     """Handles Student PIN/Code verification and Teacher Password auth."""
     try:
@@ -70,33 +134,38 @@ async def api_auth_login(request: web.Request) -> web.Response:
         code = str(data.get("code", "")).strip()
         password = str(data.get("password", "")).strip()
         telegram_id = data.get("telegram_id")
-        full_name = data.get("full_name", "Student")
+        if telegram_id:
+            try:
+                telegram_id = int(telegram_id)
+            except Exception:
+                telegram_id = None
 
         session_maker = get_session_maker()
         async with session_maker() as session:
-            # Teacher Authentication
-            if role == "teacher":
+            # Teacher / Admin Authentication
+            if role == "teacher" or role == "admin":
                 valid_passwords = ["UMAR2026", "admin", "umar123", "tutor2026"]
-                if password in valid_passwords or (telegram_id and telegram_id in settings.ADMIN_IDS):
+                is_admin_tg = settings.is_admin(telegram_id)
+                if password in valid_passwords or is_admin_tg:
                     return web.json_response({
                         "success": True,
                         "role": "teacher",
-                        "full_name": "Teacher Umar",
+                        "full_name": "Teacher Umar (Admin)",
                         "is_admin": True,
-                        "message": "O'qituvchi portaliga xush kelibsiz!"
+                        "message": "O'qituvchi boshqaruv portaliga xush kelibsiz!"
                     })
                 else:
                     return web.json_response({
                         "success": False,
-                        "message": "Noto'g'ri o'qituvchi kodi yoki paroli!"
+                        "message": "Noto'g'ri o'qituvchi paroli! (Parol: UMAR2026)"
                     }, status=401)
 
             # Student Authentication
             user = None
             if code:
                 user = await crud.get_user_by_access_code(session, code)
-            if not user and telegram_id:
-                user = await crud.get_or_create_user(session, int(telegram_id), full_name, admin_ids=settings.ADMIN_IDS)
+            elif telegram_id:
+                user = await crud.get_user_by_telegram_id(session, telegram_id)
 
             if user:
                 skills = crud.DEFAULT_SKILLS
@@ -123,13 +192,14 @@ async def api_auth_login(request: web.Request) -> web.Response:
                         "level": user.level or "Starter",
                         "streak_days": user.streak_days or 1,
                         "skills": skills,
-                        "weak_points": weak_points
+                        "weak_points": weak_points,
+                        "is_admin": settings.is_admin(user.telegram_id)
                     }
                 })
             else:
                 return web.json_response({
                     "success": False,
-                    "message": "O'quvchi kodi topilmadi. Yangi hisob ochilmoqda..."
+                    "message": "Kiritilgan kod topilmadi! Iltimos, kodni to'g'ri kiriting yoki yangi hisob oching."
                 }, status=404)
 
     except Exception as e:
@@ -178,7 +248,8 @@ async def api_get_user_data(request: web.Request) -> web.Response:
                 "words_learned": user.words_learned or 45,
                 "speaking_time": "1h 45m",
                 "skills": skills,
-                "weak_points": weak_points
+                "weak_points": weak_points,
+                "is_admin": settings.is_admin(user.telegram_id)
             })
 
     # Fallback default user structure
@@ -192,7 +263,8 @@ async def api_get_user_data(request: web.Request) -> web.Response:
         "words_learned": 36,
         "speaking_time": "1h 20m",
         "skills": crud.DEFAULT_SKILLS,
-        "weak_points": crud.DEFAULT_WEAK_POINTS
+        "weak_points": crud.DEFAULT_WEAK_POINTS,
+        "is_admin": settings.is_admin(telegram_id)
     })
 
 
@@ -655,6 +727,7 @@ def create_web_application() -> web.Application:
 
     # Core Auth & User APIs
     app.router.add_post("/api/auth/login", api_auth_login)
+    app.router.add_post("/api/auth/register", api_auth_register)
     app.router.add_get("/api/user-data", api_get_user_data)
     app.router.add_post("/api/update-level", api_update_level)
 

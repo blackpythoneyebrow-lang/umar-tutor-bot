@@ -15,6 +15,16 @@
 
   <div id="app-container">
 
+    <!-- ADMIN VIEW BANNER (Visible when admin is viewing app as student) -->
+    <div id="admin-view-banner" class="admin-view-banner" style="display: none;">
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 7px 14px; background: linear-gradient(90deg, #7c3aed, #2563eb); color: #fff; font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+        <span>👑 Admin Rejimi (O'quvchi ko'rinishi)</span>
+        <button onclick="returnToAdminPanel()" style="background: #fff; color: #1e1b4b; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">
+          ⚙️ Admin Panelga Qaytish
+        </button>
+      </div>
+    </div>
+
     <!-- =========================================
          GLOBAL TOP APP BAR (LEVEL & ROLE PICKER)
          ========================================= -->
@@ -46,7 +56,7 @@
         </div>
 
         <!-- Role / Auth Button -->
-        <button class="role-switch-btn" title="Rolni almashtirish yoki kirish" onclick="openAuthModal()">
+        <button class="role-switch-btn" title="Rolni almashtirish yoki kirish" onclick="openLoginModal()">
           🔑
         </button>
       </div>
@@ -79,11 +89,11 @@
       </div>
 
       <div class="welcome-actions">
-        <button class="btn-primary" onclick="openAuthModal()">
-          Boshlash (Kirish / Tanlash) 🚀
+        <button class="btn-primary" onclick="openRegisterModal()">
+          Boshlash (Yangi O'quvchi) 🚀
         </button>
-        <button class="btn-secondary" onclick="navigateScreen('screen-home')">
-          Mehmon sifatida ko'rish
+        <button class="btn-secondary" onclick="openLoginModal()">
+          Tizimga Kirish (Kod / Parol bilan) 🔑
         </button>
         <p class="welcome-footer-quote">Better English • A Brighter Future</p>
       </div>
@@ -801,6 +811,17 @@
         <span></span>
       </div>
 
+      <!-- Admin Quick Bar: Student View & Mode Switch -->
+      <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <div>
+          <div style="font-size: 13px; font-weight: 700; color: #fff;">👨‍🏫 Admin & O'qituvchi Boshqaruvi</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Platformadagi barcha darslar va talabalar shu yerdan nazorat qilinadi</div>
+        </div>
+        <button class="btn-primary-sm" onclick="enterStudentViewAsAdmin()" style="background: linear-gradient(135deg, #0284c7, #38bdf8); white-space: nowrap; font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: 8px;">
+          👁 O'quvchi Ko'rinishi
+        </button>
+      </div>
+
       <!-- Teacher Portal Nav Tabs -->
       <div class="teacher-tabs-row">
         <button class="teacher-tab-btn active" onclick="switchTeacherTab('tab-analytics', this)">📊 Tahlil</button>
@@ -886,6 +907,39 @@
             Dasturga Saqlash 🚀
           </button>
         </div>
+
+        <!-- CMS EXISTING MATERIALS LIST & MANAGER -->
+        <div class="cms-existing-card" style="margin-top: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md); padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 class="roster-title" style="margin: 0; font-size: 14px; color: #fff;">📋 Dasturdagi Barcha Materiallar:</h4>
+            <button class="btn-primary-sm" onclick="loadCmsExistingMaterialsList()" style="font-size: 11px; padding: 4px 8px; background: #334155;">🔄 Yangilash</button>
+          </div>
+          
+          <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+            <select id="cms-filter-category" class="form-input" style="font-size: 12px; padding: 6px;" onchange="loadCmsExistingMaterialsList()">
+              <option value="all">Barcha Turlar</option>
+              <option value="vocab">Lug'at (Vocab)</option>
+              <option value="quiz">Test (Quiz)</option>
+              <option value="grammar">Grammatika</option>
+              <option value="listening">Listening</option>
+              <option value="reading">Reading</option>
+              <option value="shadowing">Shadowing</option>
+            </select>
+            <select id="cms-filter-level" class="form-input" style="font-size: 12px; padding: 6px;" onchange="loadCmsExistingMaterialsList()">
+              <option value="all">Barcha Darajalar</option>
+              <option value="Starter">Starter</option>
+              <option value="A1">A1</option>
+              <option value="A2">A2</option>
+              <option value="B1">B1</option>
+              <option value="B2">B2</option>
+              <option value="IELTS">IELTS</option>
+            </select>
+          </div>
+
+          <div id="cms-materials-list-container" class="cms-materials-list-box" style="max-height: 280px; overflow-y: auto;">
+            <!-- Populated dynamically with delete buttons -->
+          </div>
+        </div>
       </div>
 
       <!-- TAB 3: LIVE MEETINGS SCHEDULER -->
@@ -965,55 +1019,119 @@
     </section>
 
     <!-- =========================================
-         ROLE SELECTION & AUTH MODAL
+         REGISTER MODAL (YANGI O'QUVCHI)
          ========================================= -->
-    <div id="auth-modal" class="auth-modal" style="display: none;">
+    <div id="register-modal" class="auth-modal" style="display: none;">
       <div class="auth-modal-content">
         <div class="auth-modal-header">
-          <h3>👤 Kirish & Rolni Tanlash</h3>
-          <button class="close-auth-btn" onclick="closeAuthModal()">✕</button>
+          <h3>🎓 Yangi O'quvchi Ro'yxatdan O'tishi</h3>
+          <button class="close-auth-btn" onclick="closeRegisterModal()">✕</button>
+        </div>
+
+        <div class="auth-form-pane">
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+            Shaxsiy darslaringiz, test natijalaringiz va o'sishingizni saqlash uchun quyidagilarni to'ldiring:
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Ism va Familiyangiz *</label>
+            <input id="reg-student-name" class="form-input" type="text" placeholder="Masalan: Umar Hasanov">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ingliz tili darajangiz (Level) *</label>
+            <select id="reg-student-level" class="form-input">
+              <option value="Starter">Starter (Boshlang'ich - noldan)</option>
+              <option value="A1">A1 (Elementary)</option>
+              <option value="A2">A2 (Pre-Intermediate)</option>
+              <option value="B1" selected>B1 (Intermediate)</option>
+              <option value="B2">B2 (Upper-Intermediate)</option>
+              <option value="IELTS">IELTS (Advanced 7.5+)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Shaxsiy O'quvchi Kodi / PIN (Ixtiyoriy):</label>
+            <input id="reg-student-code" class="form-input" type="text" placeholder="Bo'sh qoldirsangiz avtomatik yaratiladi (masalan STU-8821)">
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Ushbu kod sizning hisobingiz kalitidir. Keyingi safar kirishda shu koddan foydalanasiz.
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="submitStudentRegister()">
+            Ro'yxatdan O'tish va Boshlash 🚀
+          </button>
+
+          <div style="text-align: center; margin-top: 14px;">
+            <a href="javascript:void(0)" onclick="closeRegisterModal(); openLoginModal();" style="color: #38bdf8; font-size: 13px; text-decoration: underline;">
+              Menda allaqachon kod bor (Tizimga kirish) 🔑
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================
+         LOGIN MODAL (KOD / PAROL BILAN KIRISH)
+         ========================================= -->
+    <div id="login-modal" class="auth-modal" style="display: none;">
+      <div class="auth-modal-content">
+        <div class="auth-modal-header">
+          <h3>🔑 Tizimga Kirish</h3>
+          <button class="close-auth-btn" onclick="closeLoginModal()">✕</button>
         </div>
 
         <!-- Role Option Tabs -->
         <div class="auth-role-tabs">
-          <button id="auth-tab-student" class="auth-role-tab active" onclick="switchAuthRole('student')">
-            👨‍🎓 O'quvchi
+          <button id="login-tab-student" class="auth-role-tab active" onclick="switchLoginRole('student')">
+            👨‍🎓 O'quvchi Kodi
           </button>
-          <button id="auth-tab-teacher" class="auth-role-tab" onclick="switchAuthRole('teacher')">
+          <button id="login-tab-teacher" class="auth-role-tab" onclick="switchLoginRole('teacher')">
             👨‍🏫 O'qituvchi / Admin
           </button>
         </div>
 
-        <!-- Student Auth Form -->
-        <div id="auth-student-form" class="auth-form-pane">
+        <!-- Student Login Form -->
+        <div id="login-student-form" class="auth-form-pane">
           <div class="form-group">
             <label class="form-label">Shaxsiy O'quvchi PIN / Kodi:</label>
-            <input id="auth-student-code" class="form-input" type="text" placeholder="Masalan: STU-8821">
+            <input id="login-student-code" class="form-input" type="text" placeholder="Masalan: STU-8821">
             <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              Har bir o'quvchi faqat o'z shaxsiy kodi bilan kirib natijalarini ko'radi.
+              Har bir o'quvchi faqat o'z kodi orqali kirib o'z natijalarini ko'radi.
             </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Ismingiz:</label>
-            <input id="auth-student-name" class="form-input" type="text" placeholder="Ismingizni kiriting">
           </div>
           <button class="btn-primary" onclick="submitStudentLogin()">
-            O'quvchi Sifatida Kirish 🚀
+            O'quvchi Hisobiga Kirish 🚀
           </button>
+          <div style="text-align: center; margin-top: 14px;">
+            <a href="javascript:void(0)" onclick="closeLoginModal(); openRegisterModal();" style="color: #38bdf8; font-size: 13px; text-decoration: underline;">
+              Yangi o'quvchimisiz? Ro'yxatdan o'tish 📝
+            </a>
+          </div>
         </div>
 
-        <!-- Teacher Auth Form -->
-        <div id="auth-teacher-form" class="auth-form-pane" style="display: none;">
-          <div class="form-group">
+        <!-- Teacher / Admin Login Form -->
+        <div id="login-teacher-form" class="auth-form-pane" style="display: none;">
+          <div id="admin-detected-notice" style="display: none; background: rgba(34,197,94,0.15); border: 1px solid #22c55e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #86efac;">
+            👑 Sizning Telegram ID'ingiz Adminlar ro'yxatida aniqlandi!
+          </div>
+
+          <div class="form-group" id="teacher-password-group">
             <label class="form-label">Maxfiy O'qituvchi Paroli:</label>
-            <input id="auth-teacher-password" class="form-input" type="password" placeholder="Maxfiy parolni kiriting">
+            <input id="login-teacher-password" class="form-input" type="password" placeholder="Maxfiy parolni kiriting (UMAR2026)">
             <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              Admin & O'qituvchi paroli: <b>UMAR2026</b>
+              Admin paroli: <b>UMAR2026</b>
             </div>
           </div>
-          <button class="btn-primary" onclick="submitTeacherLogin()">
-            Boshqaruv Paneliga Kirish 🔐
-          </button>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+            <button class="btn-primary" onclick="submitTeacherLogin(false)">
+              👨‍🏫 Admin Panelga Kirish 🔐
+            </button>
+            <button class="btn-secondary" style="border-color: #38bdf8; color: #38bdf8;" onclick="submitTeacherLogin(true)">
+              👁 O'quvchi Ko'rinishida Sinash (Student View) 🚀
+            </button>
+          </div>
         </div>
       </div>
     </div>

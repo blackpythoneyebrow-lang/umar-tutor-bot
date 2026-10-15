@@ -99,6 +99,9 @@ function initTelegramSDK() {
       state.user.full_name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || 'Talaba';
       const homeName = document.getElementById('home-user-name');
       if (homeName) homeName.innerText = state.user.full_name;
+
+      // Auto-detect admin or existing user profile from backend
+      checkUserStatusFromBackend(tgUser.id);
     }
 
     if (tg.BackButton) {
@@ -114,6 +117,24 @@ function initTelegramSDK() {
   } catch (e) {
     console.log('Telegram SDK note:', e);
   }
+}
+
+async function checkUserStatusFromBackend(telegramId) {
+  try {
+    const res = await fetch(`/api/user-data?telegram_id=${telegramId}`);
+    const data = await res.json();
+    if (data && data.is_admin) {
+      state.isAdmin = true;
+      localStorage.setItem('umar_tutor_is_admin', 'true');
+      const notice = document.getElementById('admin-detected-notice');
+      if (notice) notice.style.display = 'block';
+    }
+    if (data && data.access_code && data.access_code !== 'STU-8821') {
+      state.user = { ...state.user, ...data };
+      if (data.level) applyActiveLevel(data.level, false);
+      syncUserUI();
+    }
+  } catch (e) {}
 }
 
 function triggerHaptic(type = 'light') {
@@ -271,29 +292,104 @@ function applyActiveLevel(level, sendToApi = true) {
 }
 
 // =========================================================================
-// ROLE SWITCHER & AUTH MODAL
+// REGISTRATION, LOGIN & ADMIN VIEW CONTROLLER
 // =========================================================================
-function openAuthModal() {
-  const modal = document.getElementById('auth-modal');
+function openRegisterModal() {
+  triggerHaptic('light');
+  const modal = document.getElementById('register-modal');
   if (modal) modal.style.display = 'flex';
+  const nameInput = document.getElementById('reg-student-name');
+  if (nameInput && !nameInput.value && state.user.full_name !== 'Talaba') {
+    nameInput.value = state.user.full_name;
+  }
 }
 
-function closeAuthModal() {
-  const modal = document.getElementById('auth-modal');
+function closeRegisterModal() {
+  const modal = document.getElementById('register-modal');
   if (modal) modal.style.display = 'none';
 }
 
-function switchAuthRole(role) {
+function openLoginModal() {
   triggerHaptic('light');
-  document.getElementById('auth-tab-student').classList.toggle('active', role === 'student');
-  document.getElementById('auth-tab-teacher').classList.toggle('active', role === 'teacher');
-  document.getElementById('auth-student-form').style.display = role === 'student' ? 'block' : 'none';
-  document.getElementById('auth-teacher-form').style.display = role === 'teacher' ? 'block' : 'none';
+  const modal = document.getElementById('login-modal');
+  if (modal) modal.style.display = 'flex';
+  if (state.isAdmin) {
+    const notice = document.getElementById('admin-detected-notice');
+    if (notice) notice.style.display = 'block';
+  }
+}
+
+function closeLoginModal() {
+  const modal = document.getElementById('login-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function switchLoginRole(role) {
+  triggerHaptic('light');
+  const tabStu = document.getElementById('login-tab-student');
+  const tabTeach = document.getElementById('login-tab-teacher');
+  const formStu = document.getElementById('login-student-form');
+  const formTeach = document.getElementById('login-teacher-form');
+
+  if (tabStu) tabStu.classList.toggle('active', role === 'student');
+  if (tabTeach) tabTeach.classList.toggle('active', role === 'teacher');
+  if (formStu) formStu.style.display = role === 'student' ? 'block' : 'none';
+  if (formTeach) formTeach.style.display = role === 'teacher' ? 'block' : 'none';
+}
+
+async function submitStudentRegister() {
+  triggerHaptic('heavy');
+  const name = document.getElementById('reg-student-name')?.value.trim();
+  const level = document.getElementById('reg-student-level')?.value || 'Starter';
+  const customCode = document.getElementById('reg-student-code')?.value.trim();
+
+  if (!name) {
+    alert("Iltimos, ism va familiyangizni kiriting!");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: name,
+        level: level,
+        code: customCode,
+        telegram_id: state.user.telegram_id
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      state.user = { ...state.user, ...data.user };
+      state.activeRole = 'student';
+      state.isAdminStudentView = false;
+      localStorage.setItem('umar_tutor_role', 'student');
+      localStorage.setItem('umar_tutor_code', data.user.access_code);
+      localStorage.setItem('umar_tutor_name', data.user.full_name);
+      localStorage.setItem('umar_tutor_level', data.user.level);
+
+      applyActiveLevel(data.user.level, false);
+      closeRegisterModal();
+      updateHeaderRoleBadge();
+      syncUserUI();
+      alert(`🎉 Tabriklaymiz! Siz muvaffaqiyatli ro'yxatdan o'tdingiz!\n\n🔑 Sizning shaxsiy kodingiz: ${data.user.access_code}\n\nUshbu kodni eslab qoling, keyingi safar kirishda shu koddan foydalanasiz!`);
+      navigateScreen('screen-home');
+    } else {
+      alert(data.message || "Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+    }
+  } catch (e) {
+    alert("Server bilan bog'lanishda xatolik. Qaytadan urinib ko'ring.");
+  }
 }
 
 async function submitStudentLogin() {
-  const code = document.getElementById('auth-student-code').value.trim() || state.user.access_code;
-  const name = document.getElementById('auth-student-name').value.trim() || state.user.full_name;
+  triggerHaptic('heavy');
+  const code = document.getElementById('login-student-code')?.value.trim();
+  if (!code) {
+    alert("Iltimos, shaxsiy kodingizni kiriting!");
+    return;
+  }
 
   try {
     const res = await fetch('/api/auth/login', {
@@ -302,7 +398,6 @@ async function submitStudentLogin() {
       body: JSON.stringify({
         role: 'student',
         code: code,
-        full_name: name,
         telegram_id: state.user.telegram_id
       })
     });
@@ -310,35 +405,29 @@ async function submitStudentLogin() {
     if (data.success && data.user) {
       state.user = { ...state.user, ...data.user };
       state.activeRole = 'student';
+      state.isAdminStudentView = false;
       localStorage.setItem('umar_tutor_role', 'student');
       localStorage.setItem('umar_tutor_code', state.user.access_code);
       localStorage.setItem('umar_tutor_name', state.user.full_name);
-      closeAuthModal();
+      if (state.user.level) {
+        applyActiveLevel(state.user.level, false);
+      }
+      closeLoginModal();
       updateHeaderRoleBadge();
       syncUserUI();
       navigateScreen('screen-home');
     } else {
-      // Local fallback
-      state.user.access_code = code;
-      state.user.full_name = name;
-      state.activeRole = 'student';
-      closeAuthModal();
-      updateHeaderRoleBadge();
-      syncUserUI();
-      navigateScreen('screen-home');
+      alert(data.message || "Bunday kodli o'quvchi topilmadi! Iltimos, kodni to'g'ri kiriting yoki ro'yxatdan o'ting.");
     }
   } catch (e) {
-    state.user.access_code = code;
-    state.user.full_name = name;
-    closeAuthModal();
-    updateHeaderRoleBadge();
-    syncUserUI();
-    navigateScreen('screen-home');
+    alert("Server bilan bog'lanishda xatolik.");
   }
 }
 
-async function submitTeacherLogin() {
-  const pass = document.getElementById('auth-teacher-password').value.trim();
+async function submitTeacherLogin(asStudentView = false) {
+  triggerHaptic('heavy');
+  const pass = document.getElementById('login-teacher-password')?.value.trim();
+
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -351,33 +440,74 @@ async function submitTeacherLogin() {
     });
     const data = await res.json();
     if (data.success) {
-      state.activeRole = 'teacher';
-      localStorage.setItem('umar_tutor_role', 'teacher');
-      closeAuthModal();
-      updateHeaderRoleBadge();
-      navigateScreen('screen-teacher');
+      state.isAdmin = true;
+      localStorage.setItem('umar_tutor_is_admin', 'true');
+      closeLoginModal();
+
+      if (asStudentView) {
+        enterStudentViewAsAdmin();
+      } else {
+        state.activeRole = 'teacher';
+        state.isAdminStudentView = false;
+        localStorage.setItem('umar_tutor_role', 'teacher');
+        updateHeaderRoleBadge();
+        navigateScreen('screen-teacher');
+      }
     } else {
       alert(data.message || "Noto'g'ri o'qituvchi paroli! (Parol: UMAR2026)");
     }
   } catch (e) {
-    if (pass === 'UMAR2026' || pass === 'admin') {
-      state.activeRole = 'teacher';
-      localStorage.setItem('umar_tutor_role', 'teacher');
-      closeAuthModal();
-      updateHeaderRoleBadge();
-      navigateScreen('screen-teacher');
+    if (pass === 'UMAR2026' || pass === 'admin' || state.isAdmin) {
+      state.isAdmin = true;
+      closeLoginModal();
+      if (asStudentView) {
+        enterStudentViewAsAdmin();
+      } else {
+        state.activeRole = 'teacher';
+        state.isAdminStudentView = false;
+        updateHeaderRoleBadge();
+        navigateScreen('screen-teacher');
+      }
     } else {
       alert("Noto'g'ri o'qituvchi paroli! (Parol: UMAR2026)");
     }
   }
 }
 
+function enterStudentViewAsAdmin() {
+  triggerHaptic('medium');
+  state.isAdminStudentView = true;
+  state.activeRole = 'student';
+  const banner = document.getElementById('admin-view-banner');
+  if (banner) banner.style.display = 'block';
+  updateHeaderRoleBadge();
+  navigateScreen('screen-home');
+}
+
+function returnToAdminPanel() {
+  triggerHaptic('heavy');
+  state.isAdminStudentView = false;
+  state.activeRole = 'teacher';
+  const banner = document.getElementById('admin-view-banner');
+  if (banner) banner.style.display = 'none';
+  updateHeaderRoleBadge();
+  navigateScreen('screen-teacher');
+}
+
+function openAuthModal() {
+  openLoginModal();
+}
+
+function closeAuthModal() {
+  closeLoginModal();
+}
+
 function handleTeacherEntry() {
-  if (state.activeRole === 'teacher') {
+  if (state.activeRole === 'teacher' || state.isAdmin) {
     navigateScreen('screen-teacher');
   } else {
-    openAuthModal();
-    switchAuthRole('teacher');
+    openLoginModal();
+    switchLoginRole('teacher');
   }
 }
 
@@ -389,7 +519,7 @@ function updateHeaderRoleBadge() {
     badge.innerText = "👨‍🏫 O'qituvchi";
   } else {
     badge.className = 'role-badge student-badge';
-    badge.innerText = "👨‍🎓 O'quvchi";
+    badge.innerText = state.isAdminStudentView ? "👑 Admin (O'quvchi)" : "👨‍🎓 O'quvchi";
   }
 }
 
@@ -1592,7 +1722,7 @@ function switchTeacherTab(tabId, btn) {
 
   state.teacherTab = tabId;
   if (tabId === 'tab-analytics') loadTeacherAnalytics();
-  if (tabId === 'tab-cms') renderCmsFormFields();
+  if (tabId === 'tab-cms') { renderCmsFormFields(); loadCmsExistingMaterialsList(); }
   if (tabId === 'tab-meetings') loadTeacherMeetings();
   if (tabId === 'tab-marking') loadTeacherSubmissions();
   if (tabId === 'tab-avatar') loadSavedAvatar();
@@ -1601,6 +1731,7 @@ function switchTeacherTab(tabId, btn) {
 function loadTeacherPortalData() {
   loadTeacherAnalytics();
   renderCmsFormFields();
+  loadCmsExistingMaterialsList();
 }
 
 async function loadTeacherAnalytics() {
@@ -1725,29 +1856,89 @@ async function submitCmsContent() {
 
   if (cat === 'vocab') {
     title = document.getElementById('cms-v-word')?.value.trim();
+    if (!title) { alert("Iltimos, so'zni kiriting!"); return; }
     const topic = document.getElementById('cms-v-topic')?.value.trim() || `${level} Mavzusi`;
     payload = {
       word: title,
       topic: topic,
       phonetics: document.getElementById('cms-v-ph')?.value.trim() || "/.../",
-      translation_uz: document.getElementById('cms-v-uz')?.value.trim(),
-      definition: document.getElementById('cms-v-def')?.value.trim(),
-      example: document.getElementById('cms-v-ex')?.value.trim()
+      translation_uz: document.getElementById('cms-v-uz')?.value.trim() || "",
+      definition: document.getElementById('cms-v-def')?.value.trim() || "",
+      example: document.getElementById('cms-v-ex')?.value.trim() || ""
     };
-    // Add to local dataset immediately
     window.APP_DATA.words.push({ id: Date.now(), level, partOfSpeech: "noun", ...payload });
     updateVocabTopicDropdown();
   } else if (cat === 'quiz') {
     title = document.getElementById('cms-q-text')?.value.trim();
-    const opts = document.getElementById('cms-q-opts')?.value.split(',').map(s => s.trim());
+    if (!title) { alert("Iltimos, savol matnini kiriting!"); return; }
+    const opts = document.getElementById('cms-q-opts')?.value.split(',').map(s => s.trim()).filter(Boolean) || ["A", "B", "C", "D"];
+    const corr = document.getElementById('cms-q-corr')?.value.trim() || opts[0];
+    const corrIdx = opts.indexOf(corr) >= 0 ? opts.indexOf(corr) : 0;
     payload = {
       question: title,
-      type: document.getElementById('cms-q-type')?.value,
+      type: document.getElementById('cms-q-type')?.value || 'mcq',
       options: opts,
-      correct: 0,
-      explanation_uz: document.getElementById('cms-q-exp')?.value.trim()
+      correct: corrIdx,
+      explanation_uz: document.getElementById('cms-q-exp')?.value.trim() || "To'g'ri javob berildi."
     };
     window.APP_DATA.quizzes.push({ id: `q_${Date.now()}`, level, ...payload });
+  } else if (cat === 'grammar') {
+    title = document.getElementById('cms-g-title')?.value.trim();
+    if (!title) { alert("Iltimos, grammatika mavzusi nomini kiriting!"); return; }
+    payload = {
+      title: title,
+      formula: document.getElementById('cms-g-formula')?.value.trim() || "Grammar Rule",
+      summary: document.getElementById('cms-g-exp')?.value.trim() || "Mavzu qoidasi",
+      wrongSentence: document.getElementById('cms-g-wrong')?.value.trim() || "",
+      correctSentence: document.getElementById('cms-g-correct')?.value.trim() || "",
+      explanation_uz: document.getElementById('cms-g-exp')?.value.trim() || "Qoidaga ko'ra to'g'ri shakli.",
+      examples: [
+        { en: document.getElementById('cms-g-correct')?.value.trim() || title, uz: "Namuna gap" }
+      ]
+    };
+    window.APP_DATA.grammarTopics.push({ id: Date.now(), level, ...payload });
+  } else if (cat === 'listening') {
+    title = document.getElementById('cms-l-title')?.value.trim();
+    if (!title) { alert("Iltimos, dars nomini kiriting!"); return; }
+    payload = {
+      title: title,
+      audioDuration: "1:00",
+      dialog: document.getElementById('cms-l-dialog')?.value.trim() || "",
+      transcript: document.getElementById('cms-l-script')?.value.trim() || "",
+      question: document.getElementById('cms-l-q')?.value.trim() || "Dialog mazmunini tushundingizmi?",
+      options: ["Ha", "Yo'q", "Boshqa"],
+      correct: 0,
+      explanation_uz: "Suhbat matniga asosan to'g'ri javob."
+    };
+    window.APP_DATA.listening.push({ id: Date.now(), level, ...payload });
+  } else if (cat === 'reading') {
+    title = document.getElementById('cms-r-title')?.value.trim();
+    if (!title) { alert("Iltimos, matn sarlavhasini kiriting!"); return; }
+    payload = {
+      title: title,
+      readTime: "3 min",
+      passage: document.getElementById('cms-r-text')?.value.trim() || "",
+      question: document.getElementById('cms-r-q')?.value.trim() || "Matn nima haqida?",
+      options: ["Fikr 1", "Fikr 2", "Fikr 3"],
+      correct: 0,
+      explanation_uz: "Matn mazmuniga ko'ra."
+    };
+    window.APP_DATA.reading.push({ id: Date.now(), level, ...payload });
+  } else if (cat === 'shadowing') {
+    title = document.getElementById('cms-s-title')?.value.trim();
+    if (!title) { alert("Iltimos, dars nomini kiriting!"); return; }
+    payload = {
+      title: title,
+      videoUrl: document.getElementById('cms-s-url')?.value.trim() || "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      lines: [
+        {
+          start: "0:02",
+          en: document.getElementById('cms-s-line-en')?.value.trim() || "",
+          uz: document.getElementById('cms-s-line-uz')?.value.trim() || ""
+        }
+      ]
+    };
+    window.APP_DATA.shadowing.push({ id: Date.now(), level, ...payload });
   }
 
   try {
@@ -1764,8 +1955,10 @@ async function submitCmsContent() {
     });
     const result = await res.json();
     alert("✅ Material muvaffaqiyatli saqlandi va dasturga joylandi!");
+    loadCmsExistingMaterialsList();
   } catch (e) {
     alert("✅ Material muvaffaqiyatli joylandi!");
+    loadCmsExistingMaterialsList();
   }
 }
 
@@ -1893,19 +2086,92 @@ async function fetchTeacherMaterials() {
     const materials = await res.json();
     if (materials && Array.isArray(materials)) {
       materials.forEach(m => {
-        if (m.category === 'vocab' && m.data && m.data.word) {
+        if (!m.data) return;
+        const lvl = m.level || 'B1';
+
+        if (m.category === 'vocab' && m.data.word) {
           const exists = window.APP_DATA.words.some(w => w.word.toLowerCase() === m.data.word.toLowerCase());
           if (!exists) {
             window.APP_DATA.words.push({
               id: m.id,
-              level: m.level || 'B1',
+              level: lvl,
               partOfSpeech: m.data.partOfSpeech || 'noun',
               word: m.data.word,
-              topic: m.data.topic || m.title || '1-mavzu',
+              topic: m.data.topic || m.title || `${lvl} Mavzusi`,
               phonetics: m.data.phonetics || '/.../',
               translation_uz: m.data.translation_uz || '',
               definition: m.data.definition || '',
               example: m.data.example || ''
+            });
+          }
+        } else if (m.category === 'quiz' && m.data.question) {
+          const exists = window.APP_DATA.quizzes.some(q => q.id === m.id || q.question === m.data.question);
+          if (!exists) {
+            window.APP_DATA.quizzes.push({
+              id: m.id,
+              level: lvl,
+              type: m.data.type || 'mcq',
+              question: m.data.question,
+              options: m.data.options || ["A", "B", "C", "D"],
+              correct: m.data.correct !== undefined ? m.data.correct : 0,
+              explanation_uz: m.data.explanation_uz || ''
+            });
+          }
+        } else if (m.category === 'grammar' && m.data.title) {
+          const exists = window.APP_DATA.grammarTopics.some(g => g.id === m.id || g.title === m.data.title);
+          if (!exists) {
+            window.APP_DATA.grammarTopics.push({
+              id: m.id,
+              level: lvl,
+              title: m.data.title,
+              formula: m.data.formula || '',
+              summary: m.data.summary || '',
+              wrongSentence: m.data.wrongSentence || '',
+              correctSentence: m.data.correctSentence || '',
+              explanation_uz: m.data.explanation_uz || '',
+              examples: m.data.examples || [{ en: m.data.correctSentence || m.data.title, uz: "Namuna" }]
+            });
+          }
+        } else if (m.category === 'listening' && m.data.title) {
+          const exists = window.APP_DATA.listening.some(l => l.id === m.id || l.title === m.data.title);
+          if (!exists) {
+            window.APP_DATA.listening.push({
+              id: m.id,
+              level: lvl,
+              title: m.data.title,
+              audioDuration: m.data.audioDuration || "1:00",
+              dialog: m.data.dialog || '',
+              transcript: m.data.transcript || '',
+              question: m.data.question || 'Savol',
+              options: m.data.options || ["A", "B"],
+              correct: m.data.correct || 0,
+              explanation_uz: m.data.explanation_uz || ''
+            });
+          }
+        } else if (m.category === 'reading' && m.data.title) {
+          const exists = window.APP_DATA.reading.some(r => r.id === m.id || r.title === m.data.title);
+          if (!exists) {
+            window.APP_DATA.reading.push({
+              id: m.id,
+              level: lvl,
+              title: m.data.title,
+              readTime: m.data.readTime || "3 min",
+              passage: m.data.passage || '',
+              question: m.data.question || 'Savol',
+              options: m.data.options || ["A", "B"],
+              correct: m.data.correct || 0,
+              explanation_uz: m.data.explanation_uz || ''
+            });
+          }
+        } else if (m.category === 'shadowing' && m.data.title) {
+          const exists = window.APP_DATA.shadowing.some(s => s.id === m.id || s.title === m.data.title);
+          if (!exists) {
+            window.APP_DATA.shadowing.push({
+              id: m.id,
+              level: lvl,
+              title: m.data.title,
+              videoUrl: m.data.videoUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+              lines: m.data.lines || []
             });
           }
         }
@@ -1913,6 +2179,88 @@ async function fetchTeacherMaterials() {
       updateVocabTopicDropdown();
     }
   } catch (e) {}
+}
+
+async function loadCmsExistingMaterialsList() {
+  const container = document.getElementById('cms-materials-list-container');
+  if (!container) return;
+
+  const filterCat = document.getElementById('cms-filter-category')?.value || 'all';
+  const filterLvl = document.getElementById('cms-filter-level')?.value || 'all';
+
+  container.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px;">Yuklanmoqda... ⏳</div>';
+
+  try {
+    const res = await fetch('/api/teacher/content');
+    const materials = await res.json();
+    if (!materials || !Array.isArray(materials) || materials.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px;">Hozircha admin tomonidan yangi material qo\'shilmagan. Yuqoridagi formadan yangi material qo\'shishingiz mumkin! 📝</div>';
+      return;
+    }
+
+    const filtered = materials.filter(m => {
+      const matchCat = filterCat === 'all' || m.category === filterCat;
+      const matchLvl = filterLvl === 'all' || m.level === filterLvl;
+      return matchCat && matchLvl;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-dim); font-size: 12px; text-align: center; padding: 12px;">Bu filtr bo\'yicha material topilmadi.</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(m => {
+      const catIcons = { vocab: '📖 Lug\'at', quiz: '🎮 Quiz', grammar: '✍️ Grammatika', listening: '🎧 Listening', reading: '📰 Reading', shadowing: '🎬 Shadowing' };
+      const icon = catIcons[m.category] || m.category;
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="font-size: 10px; background: #0284c7; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${icon}</span>
+              <span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${m.level}</span>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; color: #fff; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${m.title}
+            </div>
+          </div>
+          <button onclick="deleteCmsMaterial(${m.id})" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; margin-left: 8px; font-weight: 600;">
+            🗑 O'chirish
+          </button>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div style="color: #f87171; font-size: 12px; text-align: center; padding: 12px;">Materiallarni yuklashda xatolik.</div>';
+  }
+}
+
+async function deleteCmsMaterial(materialId) {
+  if (!confirm("Haqiqatan ham bu materialni o'chirmoqchimisiz?")) return;
+  triggerHaptic('heavy');
+  try {
+    const res = await fetch('/api/teacher/delete-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: materialId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (window.APP_DATA) {
+        window.APP_DATA.words = window.APP_DATA.words.filter(w => w.id !== materialId);
+        window.APP_DATA.quizzes = window.APP_DATA.quizzes.filter(q => q.id !== materialId && q.id !== `q_${materialId}`);
+        window.APP_DATA.grammarTopics = window.APP_DATA.grammarTopics.filter(g => g.id !== materialId);
+        window.APP_DATA.listening = window.APP_DATA.listening.filter(l => l.id !== materialId);
+        window.APP_DATA.reading = window.APP_DATA.reading.filter(r => r.id !== materialId);
+        window.APP_DATA.shadowing = window.APP_DATA.shadowing.filter(s => s.id !== materialId);
+      }
+      loadCmsExistingMaterialsList();
+      alert("✅ Material muvaffaqiyatli o'chirildi!");
+    } else {
+      alert("O'chirishda xatolik.");
+    }
+  } catch (e) {
+    alert("Server bilan bog'lanishda xatolik.");
+  }
 }
 
 async function loadSavedAvatar() {
