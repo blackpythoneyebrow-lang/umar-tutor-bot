@@ -6,6 +6,7 @@ import json
 import os
 from typing import List, Dict, Any
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +37,10 @@ def get_lesson_by_id(lesson_id: int) -> Dict[str, Any]:
             return l
     return None
 
+@router.message(Command("lessons"))
+@router.message(Command("darslar"))
 @router.message(F.text == "📚 Darslar & Vazifalar")
+@router.message(F.text == "📚 Darslar va Vazifalar")
 @router.callback_query(F.data == "goto_lessons")
 async def show_lessons_menu(event: Message | CallbackQuery, state: FSMContext):
     """Display list of available lessons."""

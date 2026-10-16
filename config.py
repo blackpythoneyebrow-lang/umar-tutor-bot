@@ -19,6 +19,8 @@ ADMIN_TELEGRAM_IDS = [
     2011411073,  # 3-Admin
 ]
 
+DEFAULT_WEBAPP_URL = "https://umar-tutor-bot.onrender.com"
+
 class Settings(BaseSettings):
     # Telegram Bot
     BOT_TOKEN: str = "8857569388:AAFYJKztG3v4fnYlYA7lwhyVi8GpXW4O6f8"
@@ -32,7 +34,7 @@ class Settings(BaseSettings):
     USE_WEBHOOK: bool = False
     WEBHOOK_URL: str = ""
     WEBHOOK_PATH: str = "/webhook"
-    WEBAPP_URL: str = ""  # WebApp URL (empty = auto cloudflared tunnel locally, or https://... in prod)
+    WEBAPP_URL: str = DEFAULT_WEBAPP_URL  # Production default
     HOST: str = "0.0.0.0"
     PORT: int = int(os.environ.get("PORT", 8080))
 
@@ -54,7 +56,7 @@ class Settings(BaseSettings):
         render_url = os.environ.get("RENDER_EXTERNAL_URL")
         if render_url and render_url.startswith("https://"):
             return render_url
-        return ""
+        return DEFAULT_WEBAPP_URL
 
     @field_validator("ADMIN_IDS", mode="before")
 

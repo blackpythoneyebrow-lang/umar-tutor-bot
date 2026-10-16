@@ -7,6 +7,7 @@ import os
 import random
 from typing import List, Dict, Any
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +47,8 @@ def get_word_card_text(word_data: Dict[str, Any], learned_count: int, total_word
         f"{bar}"
     )
 
+@router.message(Command("vocab"))
+@router.message(Command("lugat"))
 @router.message(F.text == "📖 Kunlik Lug'at")
 async def show_daily_word(message: Message, session: AsyncSession, user: User):
     """Entry point for Vocabulary Builder."""

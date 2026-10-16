@@ -74,6 +74,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   initTelegramSDK();
   loadSavedUserSession();
+  parseUrlParameters();
   loadSavedAvatar();
   initSpeechEngine();
   initWaveformCanvas();
@@ -160,6 +161,71 @@ function loadSavedUserSession() {
     updateHeaderRoleBadge();
     syncUserUI();
   } catch (e) {}
+}
+
+function parseUrlParameters() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get('role');
+    const codeParam = params.get('code');
+    const userIdParam = params.get('user_id');
+    const tabParam = params.get('tab');
+
+    if (roleParam === 'admin' || roleParam === 'teacher') {
+      state.activeRole = 'teacher';
+      state.isAdmin = true;
+      localStorage.setItem('umar_tutor_role', 'teacher');
+      localStorage.setItem('umar_tutor_is_admin', 'true');
+      updateHeaderRoleBadge();
+      
+      const adminNotice = document.getElementById('admin-detected-notice');
+      if (adminNotice) adminNotice.style.display = 'block';
+
+      if (tabParam === 'cms') {
+        navigateScreen('screen-teacher-portal');
+        switchTeacherTab('tab-cms');
+      } else {
+        navigateScreen('screen-teacher-portal');
+      }
+    } else if (roleParam === 'student') {
+      state.activeRole = 'student';
+      localStorage.setItem('umar_tutor_role', 'student');
+      updateHeaderRoleBadge();
+
+      const isAdminSaved = localStorage.getItem('umar_tutor_is_admin') === 'true' || state.isAdmin;
+      const banner = document.getElementById('admin-view-banner');
+      if (banner && isAdminSaved) {
+        banner.style.display = 'block';
+      }
+    }
+
+    if (codeParam) {
+      state.user.access_code = codeParam;
+      localStorage.setItem('umar_tutor_code', codeParam);
+      syncUserUI();
+      fetch(`/api/user-data?code=${encodeURIComponent(codeParam)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.success !== false) {
+            state.user = { ...state.user, ...data };
+            if (data.is_admin) {
+              state.isAdmin = true;
+              localStorage.setItem('umar_tutor_is_admin', 'true');
+            }
+            if (data.level) applyActiveLevel(data.level, false);
+            syncUserUI();
+          }
+        })
+        .catch(() => {});
+    }
+
+    if (userIdParam) {
+      state.user.telegram_id = parseInt(userIdParam);
+      checkUserStatusFromBackend(userIdParam);
+    }
+  } catch (e) {
+    console.log('URL parameters note:', e);
+  }
 }
 
 function syncUserUI() {

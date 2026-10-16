@@ -6,6 +6,7 @@ import json
 import os
 from typing import Dict, Any, List
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,7 @@ def load_speaking_data() -> Dict[str, Any]:
 
 SPEAKING_DATA = load_speaking_data()
 
+@router.message(Command("speaking"))
 @router.message(F.text == "🎙 Speaking Practice")
 @router.callback_query(F.data == "goto_speaking")
 async def show_speaking_hub(event: Message | CallbackQuery, state: FSMContext):

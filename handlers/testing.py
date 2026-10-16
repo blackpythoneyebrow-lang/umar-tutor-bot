@@ -7,6 +7,7 @@ import os
 import random
 from typing import List, Dict, Any
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,6 +73,7 @@ LEVEL_DESCRIPTIONS = {
     "C2": "🔴 **C2 - Proficiency (Mukammal)**\nOna tili darajasida so'zlasha olasiz. Har qanday akademik va nozik ma'nodagi suhbatlarni bemalol o'zlashtirasiz."
 }
 
+@router.message(Command("test"))
 @router.message(F.text == "🎯 Darajani aniqlash (Test)")
 async def test_menu_entry(message: Message, state: FSMContext):
     """Entry point for placement testing."""

@@ -26,9 +26,9 @@ router = Router(name="admin")
 
 def is_admin_user(user: User, tg_id: int) -> bool:
     """Check if current user has admin privileges."""
-    if tg_id in settings.ADMIN_IDS:
+    if settings.is_admin(tg_id):
         return True
-    if user and user.is_admin:
+    if user and (getattr(user, "is_admin", False) or getattr(user, "role", "") == "admin"):
         return True
     return False
 

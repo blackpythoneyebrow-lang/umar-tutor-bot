@@ -1,11 +1,29 @@
 """
 Admin keyboards for Umar Tutor Bot.
 """
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from config import settings
 
 def get_admin_main_keyboard() -> InlineKeyboardMarkup:
     """Admin dashboard navigation."""
+    base = settings.WEBAPP_URL or "https://umar-tutor-bot.onrender.com"
+    v = "2.2"
+    url_admin = f"{base}?role=admin&v={v}"
+    url_student = f"{base}?role=student&v={v}"
+
     buttons = [
+        [
+            InlineKeyboardButton(
+                text="💻 Web CMS Admin Panelni Ochish",
+                web_app=WebAppInfo(url=url_admin)
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="👁 O'quvchi rejimida ko'rish",
+                web_app=WebAppInfo(url=url_student)
+            )
+        ],
         [
             InlineKeyboardButton(text="📊 Umumiy Statistika", callback_data="admin_stats"),
             InlineKeyboardButton(text="👥 Talabalar Ro'yxati", callback_data="admin_students")
@@ -14,7 +32,7 @@ def get_admin_main_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📢 Barchaga Xabar Yuborish (Broadcast)", callback_data="admin_broadcast")
         ],
         [
-            InlineKeyboardButton(text="🔙 Foydalanuvchi menyusiga qaytish", callback_data="menu_home")
+            InlineKeyboardButton(text="🔙 Asosiy menyuga qaytish", callback_data="menu_home")
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)

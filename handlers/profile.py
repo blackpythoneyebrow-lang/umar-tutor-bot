@@ -3,6 +3,7 @@ Student profile and progress tracking handler for Umar Tutor Bot.
 Displays CEFR level, daily streaks, test scores, and statistics.
 """
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,8 @@ def format_profile_text(user: User, learned_words_count: int) -> str:
         f"🌟 *\"Small steps every day lead to big results.\"*"
     )
 
+@router.message(Command("profile"))
+@router.message(Command("profil"))
 @router.message(F.text == "📊 Mening Profilim")
 async def show_profile_message(message: Message, session: AsyncSession, user: User):
     """Entry point for Profile via main menu."""

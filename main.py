@@ -820,8 +820,24 @@ async def configure_bot_services():
                     meeting_link="https://t.me/umar_tutor_bot",
                     platform="Telegram Video Dars"
                 )
+            # Ensure all configured admins exist in DB with admin status
+            admin_list = [786373932, 8737899414, 2011411073]
+            if isinstance(settings.ADMIN_IDS, list):
+                admin_list = list(set(admin_list + settings.ADMIN_IDS))
+            for aid in admin_list:
+                user = await crud.get_or_create_user(
+                    session=session,
+                    telegram_id=aid,
+                    full_name=f"Admin {aid}",
+                    admin_ids=admin_list
+                )
+                if not user.is_admin or user.role != "admin":
+                    user.is_admin = True
+                    user.role = "admin"
+                    await session.commit()
+            logger.info(f"Verified {len(admin_list)} admin accounts in database.")
     except Exception as e:
-        logger.warning(f"Note seeding meetings: {e}")
+        logger.warning(f"Note seeding DB: {e}")
 
     # Auto-detect Render public URL if running on Render
     if not settings.WEBAPP_URL or not settings.WEBAPP_URL.startswith("https://"):
@@ -836,14 +852,16 @@ async def configure_bot_services():
         if tunnel_url:
             settings.WEBAPP_URL = tunnel_url
 
-    # Configure Telegram persistent WebApp button if URL provided
-    if settings.WEBAPP_URL and settings.WEBAPP_URL.startswith("https://"):
+    # Configure Telegram persistent WebApp button
+    base_webapp = settings.WEBAPP_URL or "https://umar-tutor-bot.onrender.com"
+    if base_webapp and base_webapp.startswith("https://"):
         try:
-            logger.info(f"Registering Telegram WebApp Menu Button: {settings.WEBAPP_URL}")
+            menu_url = f"{base_webapp.rstrip('/')}/?v=2.2"
+            logger.info(f"Registering Telegram WebApp Menu Button: {menu_url}")
             await bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(
                     text="Umar Tutor 🚀",
-                    web_app=WebAppInfo(url=settings.WEBAPP_URL)
+                    web_app=WebAppInfo(url=menu_url)
                 )
             )
         except Exception as e:

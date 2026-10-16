@@ -3,6 +3,7 @@ Grammar Correction Assistant handler for Umar Tutor Bot.
 Analyzes sentences sent by users, detects mistakes, shows corrections and pedagogical explanations.
 """
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 
@@ -11,6 +12,8 @@ from services.grammar_checker import analyze_grammar
 
 router = Router(name="grammar")
 
+@router.message(Command("grammar"))
+@router.message(Command("grammatika"))
 @router.message(F.text == "✍️ Grammar Helper")
 async def start_grammar_checker(message: Message, state: FSMContext):
     """Entry point for Grammar Helper."""
