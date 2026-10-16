@@ -23,18 +23,16 @@ from database.models import (
 )
 
 DEFAULT_SKILLS = {
-    "vocab": 75,
-    "grammar": 70,
-    "speaking": 65,
-    "listening": 70,
-    "reading": 68,
-    "quiz": 75
+    "vocab": 0,
+    "grammar": 0,
+    "speaking": 0,
+    "listening": 0,
+    "reading": 0,
+    "quiz": 0
 }
 
 DEFAULT_WEAK_POINTS = [
-    "Past Simple va Present Perfect zamonlari farqi",
-    "Speakingda bog'lovchi so'zlar (however, therefore) ishlatish",
-    "B2 darajadagi akademik so'zlar boyligini oshirish"
+    "Hali testlar topshirilmadi. Boshlash uchun o'quv bo'limlaridan birini tanlang."
 ]
 
 def generate_student_code(telegram_id: int) -> str:

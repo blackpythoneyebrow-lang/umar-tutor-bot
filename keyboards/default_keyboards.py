@@ -5,7 +5,7 @@ Line reply buttons are removed so the user only interacts via Telegram WebApp (M
 from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from config import settings
 
-CACHE_VERSION = "2.2"
+CACHE_VERSION = "2.3"
 
 def get_remove_keyboard() -> ReplyKeyboardRemove:
     """Removes any persistent reply keyboard from the user screen."""

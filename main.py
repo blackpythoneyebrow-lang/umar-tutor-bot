@@ -234,34 +234,34 @@ async def api_get_user_data(request: web.Request) -> web.Response:
                 except Exception:
                     pass
 
-            avg_score = round(sum(skills.values()) / len(skills)) if skills else 75
+            avg_score = round(sum(skills.values()) / len(skills)) if (skills and sum(skills.values()) > 0) else 0
 
             return web.json_response({
                 "id": user.id,
                 "telegram_id": user.telegram_id,
-                "full_name": user.full_name,
+                "full_name": user.full_name or "Foydalanuvchi",
                 "access_code": user.access_code or f"STU-{user.id}",
                 "level": user.level or "Starter",
                 "role": user.role or "student",
                 "streak_days": user.streak_days or 1,
                 "accuracy": f"{avg_score}%",
-                "words_learned": user.words_learned or 45,
-                "speaking_time": "1h 45m",
+                "words_learned": user.words_learned or 0,
+                "speaking_time": "0m" if avg_score == 0 else "1h 45m",
                 "skills": skills,
                 "weak_points": weak_points,
                 "is_admin": settings.is_admin(user.telegram_id)
             })
 
-    # Fallback default user structure
+    # Fallback default user structure for new user
     return web.json_response({
-        "full_name": "Student",
-        "access_code": "STU-8821",
-        "level": "A1",
+        "full_name": "Foydalanuvchi",
+        "access_code": "STU-1001",
+        "level": "B1",
         "role": "student",
-        "streak_days": 3,
-        "accuracy": "78%",
-        "words_learned": 36,
-        "speaking_time": "1h 20m",
+        "streak_days": 1,
+        "accuracy": "0%",
+        "words_learned": 0,
+        "speaking_time": "0m",
         "skills": crud.DEFAULT_SKILLS,
         "weak_points": crud.DEFAULT_WEAK_POINTS,
         "is_admin": settings.is_admin(telegram_id)
@@ -372,6 +372,43 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
 
         has_error = len(grammar_errors) > 0
 
+        # 4. Question Relevance Analysis (Task Response & Topic Appropriateness)
+        prompt_topic_lower = f"{prompt_id} {prompt_title}".lower()
+        topic_keywords = {
+            "travel": ["trip", "travel", "went", "visit", "city", "summer", "vacation", "journey", "place", "places", "mountain", "beach", "hotel", "bukhara", "samarkand", "tashkent", "arrived", "beautiful", "tour", "tourist", "sayohat", "shaharlar", "sp_b1"],
+            "routine": ["day", "morning", "night", "evening", "wake", "get up", "breakfast", "lunch", "dinner", "work", "study", "sleep", "usually", "routine", "clock", "hours", "always", "sometimes", "tartib", "kundalik", "odat", "sp_a2"],
+            "family": ["family", "father", "mother", "brother", "sister", "parents", "home", "live", "together", "children", "friend", "friends", "love", "oila", "uy", "do'st", "sp_a1"],
+            "introduce": ["name", "from", "live", "years", "old", "hobby", "hobbies", "study", "student", "work", "football", "like", "love", "born", "o'zingiz", "tanishuv", "salomlashish", "sp_starter"],
+            "challenge": ["challenge", "difficult", "hard", "problem", "solve", "overcome", "success", "exam", "university", "learned", "result", "goal", "qiyinchilik", "cue card", "sp_ielts"],
+            "tech": ["technology", "phone", "internet", "computer", "ai", "online", "apps", "digital", "social", "media", "texnologiya", "sp_b2"]
+        }
+
+        matched_cat = None
+        for cat, kws in topic_keywords.items():
+            if any(k in prompt_topic_lower for k in kws):
+                matched_cat = cat
+                break
+
+        relevance_status = "good"
+        relevance_badge = "✅ To'liq javob berildi"
+        relevance_desc = "Siz berilgan mavzu doirasida to'g'ri va bog'liq fikr bildirdingiz."
+
+        if matched_cat:
+            cat_words = [w for w in topic_keywords[matched_cat] if not any(c in w for c in ['sayohat', 'shaharlar', 'sp_b1', 'tartib', 'kundalik', 'odat', 'sp_a2', 'oila', 'uy', 'sp_a1', 'o\'zingiz', 'tanishuv', 'sp_starter', 'qiyinchilik', 'sp_ielts', 'texnologiya', 'sp_b2'])]
+            found_kws = [w for w in cat_words if w in lower_t]
+            if len(found_kws) >= 2:
+                relevance_status = "good"
+                relevance_badge = "✅ To'liq javob berildi"
+                relevance_desc = f"Savolga to'g'ri javob berildi. Mavzuga doir so'zlar: {', '.join(found_kws[:3])}."
+            elif len(found_kws) == 1:
+                relevance_status = "warning"
+                relevance_badge = "⚠️ Qisman javob berildi"
+                relevance_desc = "Mavzuga biroz to'xtaldingiz, ammo savol talabini yanada to'liqroq yoritish lozim."
+            else:
+                relevance_status = "poor"
+                relevance_badge = "❌ Savoldan chetga chiqildi"
+                relevance_desc = f"Berilgan savol '{prompt_title}' haqida edi, lekin javobingizda bu mavzuga oid kalit so'zlar aniqlanmadi."
+
         # Calculate realistic score & band
         if has_error:
             score = max(45, min(64, 52 + (word_count // 3) - (len(grammar_errors) * 6)))
@@ -401,6 +438,15 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
                 f"Juda yaxshi natija! Nutq ravon ({word_count} ta so'z) va fikr aniq ifodalangan. "
                 f"IELTS Speaking mezonlariga mos ravishda ifoda etdingiz."
             )
+
+        if relevance_status == "poor":
+            score = min(score, 52)
+            band = "4.0 - 4.5"
+            status = "poor"
+        elif relevance_status == "warning":
+            score = min(score, 70)
+            if status != "poor":
+                status = "warning"
 
         vocab_upgrades = [
             {"simple": "good", "advanced": "exceptional / beneficial"},
@@ -446,7 +492,10 @@ async def api_speaking_analyze(request: web.Request) -> web.Response:
             "grammar_errors": grammar_errors,
             "pronunciation_tip": pronunciation_tip,
             "vocab_upgrades": vocab_upgrades,
-            "feedback_uz": feedback_uz
+            "feedback_uz": feedback_uz,
+            "relevance_status": relevance_status,
+            "relevance_badge": relevance_badge,
+            "relevance_desc": relevance_desc
         })
 
     except Exception as e:
@@ -856,7 +905,7 @@ async def configure_bot_services():
     base_webapp = settings.WEBAPP_URL or "https://umar-tutor-bot.onrender.com"
     if base_webapp and base_webapp.startswith("https://"):
         try:
-            menu_url = f"{base_webapp.rstrip('/')}/?v=2.2"
+            menu_url = f"{base_webapp.rstrip('/')}/?v=2.3"
             logger.info(f"Registering Telegram WebApp Menu Button: {menu_url}")
             await bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(

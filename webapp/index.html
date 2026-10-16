@@ -9,7 +9,7 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
   <!-- Custom Mobile UI Styles -->
-  <link rel="stylesheet" href="css/style.css?v=2.2">
+  <link rel="stylesheet" href="css/style.css?v=2.3">
 </head>
 <body>
 
@@ -26,15 +26,15 @@
     </div>
 
     <!-- =========================================
-         GLOBAL TOP APP BAR (LEVEL & ROLE PICKER)
+         GLOBAL TOP APP BAR (USER NAME & ADMIN SWITCH)
          ========================================= -->
     <header id="global-header" class="global-header">
       <div class="header-left" onclick="navigateScreen('screen-home')">
         <div class="bot-avatar-badge-sm">
-          <img class="teacher-avatar-target" src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 24px; height: 24px;">
+          <img class="teacher-avatar-target" src="assets/robot.svg" alt="Avatar" style="width: 26px; height: 26px; border-radius: 50%;">
         </div>
         <div class="header-title-box">
-          <span class="header-app-name">Umar Tutor</span>
+          <span id="header-user-name" class="header-app-name">Foydalanuvchi</span>
           <span id="header-user-role-badge" class="role-badge student-badge">👨‍🎓 O'quvchi</span>
         </div>
       </div>
@@ -55,139 +55,102 @@
           </div>
         </div>
 
-        <!-- Role / Auth Button -->
-        <button class="role-switch-btn" title="Rolni almashtirish yoki kirish" onclick="openLoginModal()">
-          🔑
+        <!-- Admin Direct Switch Button (NO password required!) -->
+        <button id="header-admin-btn" class="admin-quick-switch-btn" title="Admin panelga o'tish" onclick="toggleAdminStudentMode()" style="display: none;">
+          👑 Admin
         </button>
       </div>
     </header>
 
-    <!-- LIVE MEETING BANNER (Visible when active) -->
-    <div id="live-meeting-banner" class="live-meeting-banner" style="display: none;">
-      <div class="banner-content">
-        <span class="live-pulse-dot"></span>
-        <span id="banner-meeting-text">🔴 Jonli Dars: Bugun 20:30 da!</span>
-      </div>
-      <a id="banner-meeting-btn" href="#" target="_blank" class="banner-action-btn">Kirish 🔗</a>
-    </div>
-
     <!-- =========================================
-         SCREEN 1: WELCOME / ONBOARDING
+         SCREEN 2: DASHBOARD / MAIN MENU (ACTIVE BY DEFAULT)
          ========================================= -->
-    <section id="screen-welcome" class="screen active">
-      <div class="welcome-speech-bubble">
-        Assalomu alaykum! 👋 Men <b>"Umar Tutor"</b> ingliz tili yordamchingizman. Keling, ingliz tilingizni qadam-baqadam yuksaltiramiz! 🇬🇧✨
-      </div>
-
-      <div class="robot-mascot-wrapper">
-        <img class="teacher-avatar-target welcome-avatar-img" src="assets/robot.svg" alt="Umar Tutor Mascot" style="width: 100%; height: 100%;">
-      </div>
-
-      <div>
-        <h1 class="welcome-hero-title">Umar Tutor</h1>
-        <p class="welcome-hero-sub">Ingliz Tilini Professional O'rganing</p>
-      </div>
-
-      <div class="welcome-actions">
-        <button class="btn-primary" onclick="openRegisterModal()">
-          Boshlash (Yangi O'quvchi) 🚀
-        </button>
-        <button class="btn-secondary" onclick="openLoginModal()">
-          Tizimga Kirish (Kod / Parol bilan) 🔑
-        </button>
-        <p class="welcome-footer-quote">Better English • A Brighter Future</p>
-      </div>
-    </section>
-
-    <!-- =========================================
-         SCREEN 2: DASHBOARD / MAIN MENU
-         ========================================= -->
-    <section id="screen-home" class="screen">
+    <section id="screen-home" class="screen active">
       <!-- User Quick Summary Card -->
       <div class="student-hero-card">
         <div class="hero-card-left">
-          <div class="user-greeting">Xush kelibsiz, <span id="home-user-name">Talaba</span>! 👋</div>
-          <div class="user-code-pill">Kod: <b id="home-user-code">STU-8821</b></div>
+          <div class="user-greeting">Salom, <span id="home-user-name">Foydalanuvchi</span>! 👋</div>
+          <div class="user-code-pill">ID Kod: <b id="home-user-code">STU-1226</b></div>
           <div class="user-stats-row">
-            <span class="stat-badge">🔥 <b id="home-streak-days">3</b> kunlik streak</span>
-            <span class="stat-badge">🎯 O'rtacha: <b id="home-accuracy">78%</b></span>
+            <span class="stat-badge">🔥 <b id="home-streak-days">1</b> kunlik streak</span>
+            <span class="stat-badge">🎯 Natija: <b id="home-accuracy">0%</b></span>
           </div>
         </div>
         <div class="hero-card-right">
-          <div class="hero-level-badge" id="home-hero-level">B1</div>
+          <div class="hero-level-badge" id="home-hero-level" onclick="toggleLevelMenu()" title="Darajani o'zgartirish">B1</div>
         </div>
       </div>
 
-      <div class="menu-section-title">O'quv Modullari</div>
+      <!-- Admin Quick Bar (Only for Admins - No password required!) -->
+      <div id="admin-quick-card" class="teacher-access-banner" style="display: none;" onclick="toggleAdminStudentMode()">
+        <div class="teacher-banner-left">
+          <div class="teacher-banner-icon">👑</div>
+          <div>
+            <div class="teacher-banner-title" id="admin-card-title">Admin & O'qituvchi Boshqaruvi</div>
+            <div class="teacher-banner-sub">CMS kontent qo'shish, o'chirish va talabalar monitoringi</div>
+          </div>
+        </div>
+        <div class="teacher-banner-arrow">›</div>
+      </div>
+
+      <div class="menu-section-title">O'quv Bo'limlari</div>
 
       <div class="menu-grid">
         <!-- Vocab Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-vocab')">
           <div class="grid-card-icon">📖</div>
-          <div class="grid-card-title">Lug'at (Vocab)</div>
-          <div class="grid-card-sub">Audio talaffuz & Maxsus test</div>
+          <div class="grid-card-title">Lug'at</div>
+          <div class="grid-card-sub">So'zlar & Audio talaffuz</div>
         </div>
 
         <!-- Speaking Card -->
         <div class="menu-grid-card highlight-card" onclick="navigateScreen('screen-speaking')">
           <div class="grid-card-icon">🎙</div>
           <div class="grid-card-title">Speaking AI</div>
-          <div class="grid-card-sub">ChatGPT tahlili & Band score</div>
+          <div class="grid-card-sub">Ovozli suhbat & Tahlil</div>
         </div>
 
         <!-- 5-Type Quiz Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-quiz')">
           <div class="grid-card-icon">🎮</div>
-          <div class="grid-card-title">5 xil Test (Quiz)</div>
-          <div class="grid-card-sub">Xato topish, Scramble, Gap-fill</div>
+          <div class="grid-card-title">Testlar (Quiz)</div>
+          <div class="grid-card-sub">5 xil interaktiv mashq</div>
         </div>
 
         <!-- Grammar Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-grammar')">
           <div class="grid-card-icon">✍️</div>
           <div class="grid-card-title">Grammatika</div>
-          <div class="grid-card-sub">Xato vs To'g'ri gap & Qoidalar</div>
+          <div class="grid-card-sub">Xatolarni tuzatish</div>
         </div>
 
         <!-- Listening Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-listening')">
           <div class="grid-card-icon">🎧</div>
-          <div class="grid-card-title">Listening Studio</div>
-          <div class="grid-card-sub">Audio & Transkript ochilishi</div>
+          <div class="grid-card-title">Listening</div>
+          <div class="grid-card-sub">Audio dialoglar</div>
         </div>
 
         <!-- Reading Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-reading')">
           <div class="grid-card-icon">📚</div>
-          <div class="grid-card-title">Reading Hub</div>
-          <div class="grid-card-sub">Matnlar & Savol-javob</div>
+          <div class="grid-card-title">Reading</div>
+          <div class="grid-card-sub">Matn va savollar</div>
         </div>
 
         <!-- Shadowing Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-shadowing')">
           <div class="grid-card-icon">🎬</div>
           <div class="grid-card-title">Shadowing</div>
-          <div class="grid-card-sub">Video & Qatorlab takrorlash</div>
+          <div class="grid-card-sub">Qatorlab takrorlash</div>
         </div>
 
         <!-- Progress Card -->
         <div class="menu-grid-card" onclick="navigateScreen('screen-progress')">
           <div class="grid-card-icon">📊</div>
-          <div class="grid-card-title">Mening O'sishim</div>
-          <div class="grid-card-sub">6 ta mahorat foizlari & Tavsiyalar</div>
+          <div class="grid-card-title">O'sishim</div>
+          <div class="grid-card-sub">Natijalar & Statistika</div>
         </div>
-      </div>
-
-      <!-- Teacher Portal Access Card -->
-      <div class="teacher-access-banner" onclick="handleTeacherEntry()">
-        <div class="teacher-banner-left">
-          <div class="teacher-banner-icon">👨‍🏫</div>
-          <div>
-            <div class="teacher-banner-title">O'qituvchi & Admin Portali</div>
-            <div class="teacher-banner-sub">Xatolar tahlili, Kontent qo'shish, Jonli dars va Baholash</div>
-          </div>
-        </div>
-        <div class="teacher-banner-arrow">›</div>
       </div>
     </section>
 
@@ -297,6 +260,12 @@
           Gapirish uchun pastdagi mikrofon tugmasini bosing
         </div>
 
+        <!-- Live Real-Time Speech-to-Text Preview -->
+        <div id="speaking-live-transcript-box" style="display: none; margin: 8px 0; padding: 8px 12px; background: rgba(56, 189, 248, 0.1); border: 1px dashed #38bdf8; border-radius: 8px; font-size: 13px; color: #0284c7; text-align: left;">
+          <span style="font-weight: 700;">🗣 Siz aytyapsiz: </span>
+          <span id="speaking-live-transcript-text">...</span>
+        </div>
+
         <!-- Mic Button -->
         <div class="mic-button-wrapper">
           <button id="mic-toggle-btn" class="mic-pulse-btn" onclick="toggleSpeakingRecord()">
@@ -305,8 +274,19 @@
         </div>
 
         <div style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">
-          Gapirib bo'lgach, tugmani yana bosing yoki jim turing (avtomatik to'xtaydi)
+          Gapirib bo'lgach, tugmani yana bosing (kamida 1-2 gap ayting)
         </div>
+      </div>
+
+      <!-- Manual Text Input / Practice Option -->
+      <div class="manual-speaking-input-box" style="margin-top: 14px; background: var(--surface-card); border: 1px solid var(--surface-border); border-radius: 12px; padding: 12px;">
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">
+          ✍️ Yoki javobingizni yozib tekshiring (Mikrofonsiz sinash):
+        </div>
+        <textarea id="manual-speaking-text" class="form-input" style="width: 100%; min-height: 70px; resize: vertical; font-size: 13px; font-family: inherit;" placeholder="Mavzuga doir javobingizni ingliz tilida yozing..."></textarea>
+        <button class="btn-primary-sm" style="width: 100%; margin-top: 8px; justify-content: center;" onclick="submitManualSpeakingText()">
+          Javobni Tekshirish & Tahlil Qilish 🚀
+        </button>
       </div>
 
       <!-- Student Voice Playback Studio (Listen to your recorded speech) -->
@@ -336,6 +316,17 @@
         <div id="feedback-status-banner" class="feedback-status-banner warning">
           <span id="feedback-status-icon">⚠️</span>
           <span id="feedback-status-text">Xatolar tahlili</span>
+        </div>
+
+        <!-- Question Relevance & Task Response Box -->
+        <div id="feedback-relevance-box" class="feedback-relevance-box" style="margin: 12px 0; padding: 10px 12px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--accent-blue);">🎯 Savolga javob berildimi?</span>
+            <span id="feedback-relevance-badge" class="badge-pill" style="font-size: 11px;">✅ To'liq javob berildi</span>
+          </div>
+          <p id="feedback-relevance-desc" style="font-size: 12px; color: var(--text-main); margin: 0; line-height: 1.4;">
+            Siz berilgan mavzu doirasida to'g'ri fikr bildirdingiz.
+          </p>
         </div>
 
         <!-- Band & Fluency row -->
@@ -1112,24 +1103,21 @@
 
         <!-- Teacher / Admin Login Form -->
         <div id="login-teacher-form" class="auth-form-pane" style="display: none;">
-          <div id="admin-detected-notice" style="display: none; background: rgba(34,197,94,0.15); border: 1px solid #22c55e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #86efac;">
-            👑 Sizning Telegram ID'ingiz Adminlar ro'yxatida aniqlandi!
+          <div id="admin-detected-notice" style="display: block; background: rgba(34,197,94,0.15); border: 1px solid #22c55e; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #86efac;">
+            👑 Admin hisob: Parol kiritish talab qilinmaydi! To'g'ridan-to'g'ri kirishingiz mumkin.
           </div>
 
-          <div class="form-group" id="teacher-password-group">
-            <label class="form-label">Maxfiy O'qituvchi Paroli:</label>
-            <input id="login-teacher-password" class="form-input" type="password" placeholder="Maxfiy parolni kiriting (UMAR2026)">
-            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              Admin paroli: <b>UMAR2026</b>
-            </div>
+          <div class="form-group" id="teacher-password-group" style="display: none;">
+            <label class="form-label">Maxfiy O'qituvchi Paroli (Ixtiyoriy):</label>
+            <input id="login-teacher-password" class="form-input" type="password" value="UMAR2026">
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
             <button class="btn-primary" onclick="submitTeacherLogin(false)">
-              👨‍🏫 Admin Panelga Kirish 🔐
+              👑 Admin Boshqaruv Paneliga Kirish 🚀
             </button>
             <button class="btn-secondary" style="border-color: #38bdf8; color: #38bdf8;" onclick="submitTeacherLogin(true)">
-              👁 O'quvchi Ko'rinishida Sinash (Student View) 🚀
+              👁 O'quvchi Ko'rinishida Sinash (Student View)
             </button>
           </div>
         </div>
@@ -1165,8 +1153,8 @@
   </div>
 
   <!-- Educational Datasets -->
-  <script src="js/data.js?v=2.2"></script>
+  <script src="js/data.js?v=2.3"></script>
   <!-- Main Application Script -->
-  <script src="js/app.js?v=2.2"></script>
+  <script src="js/app.js?v=2.3"></script>
 </body>
 </html>

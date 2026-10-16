@@ -6,25 +6,25 @@
  */
 
 const tg = window.Telegram?.WebApp;
+const ADMIN_IDS = [786373932, 8737899414, 2011411073];
 
 // Global App State
 const state = {
-  currentScreen: 'screen-welcome',
+  currentScreen: 'screen-home',
   history: [],
   activeLevel: 'B1',
   activeRole: 'student', // 'student' or 'teacher'
+  isAdmin: false,
   user: {
     id: 1,
     telegram_id: null,
-    full_name: 'Talaba',
-    access_code: 'STU-8821',
+    full_name: 'Foydalanuvchi',
+    access_code: 'STU-1001',
     level: 'B1',
-    streak_days: 3,
-    skills: { vocab: 80, grammar: 72, speaking: 65, listening: 75, reading: 70, quiz: 80 },
+    streak_days: 1,
+    skills: { vocab: 0, grammar: 0, speaking: 0, listening: 0, reading: 0, quiz: 0 },
     weak_points: [
-      "Past Simple va Present Perfect farqini takrorlash",
-      "Speakingda murakkab bog'lovchilarni ishlatish",
-      "B2 darajadagi akademik so'zlarni boyitish"
+      "Hali mashqlar bajarilmadi. Boshlash uchun o'quv bo'limlaridan birini tanlang."
     ]
   },
   // Vocab State
@@ -90,18 +90,19 @@ function initTelegramSDK() {
     tg.expand();
     tg.enableClosingConfirmation();
     if (tg.setHeaderColor) {
-      tg.setHeaderColor('#070d19');
-      tg.setBackgroundColor('#070d19');
+      tg.setHeaderColor('#ffffff');
+      tg.setBackgroundColor('#f8fafc');
     }
     // Auto-fill Telegram user profile
     const tgUser = tg.initDataUnsafe?.user;
     if (tgUser) {
       state.user.telegram_id = tgUser.id;
-      state.user.full_name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || 'Talaba';
-      const homeName = document.getElementById('home-user-name');
-      if (homeName) homeName.innerText = state.user.full_name;
-
-      // Auto-detect admin or existing user profile from backend
+      state.user.full_name = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || 'Foydalanuvchi';
+      if (ADMIN_IDS.includes(Number(tgUser.id))) {
+        state.isAdmin = true;
+        localStorage.setItem('umar_tutor_is_admin', 'true');
+      }
+      syncUserUI();
       checkUserStatusFromBackend(tgUser.id);
     }
 
@@ -127,14 +128,12 @@ async function checkUserStatusFromBackend(telegramId) {
     if (data && data.is_admin) {
       state.isAdmin = true;
       localStorage.setItem('umar_tutor_is_admin', 'true');
-      const notice = document.getElementById('admin-detected-notice');
-      if (notice) notice.style.display = 'block';
     }
     if (data && data.access_code && data.access_code !== 'STU-8821') {
       state.user = { ...state.user, ...data };
       if (data.level) applyActiveLevel(data.level, false);
-      syncUserUI();
     }
+    syncUserUI();
   } catch (e) {}
 }
 
@@ -234,14 +233,85 @@ function syncUserUI() {
   const homeStreak = document.getElementById('home-streak-days');
   const homeAccuracy = document.getElementById('home-accuracy');
   const homeHeroLevel = document.getElementById('home-hero-level');
+  const headerName = document.getElementById('header-user-name');
+  const headerRole = document.getElementById('header-user-role-badge');
+  const headerAdminBtn = document.getElementById('header-admin-btn');
+  const adminQuickCard = document.getElementById('admin-quick-card');
+  const adminCardTitle = document.getElementById('admin-card-title');
 
-  if (homeName) homeName.innerText = state.user.full_name;
-  if (homeCode) homeCode.innerText = state.user.access_code;
-  if (homeStreak) homeStreak.innerText = state.user.streak_days;
-  if (homeHeroLevel) homeHeroLevel.innerText = state.activeLevel;
+  const displayName = state.user.full_name || 'Foydalanuvchi';
+  if (homeName) homeName.innerText = displayName;
+  if (headerName) headerName.innerText = displayName;
+  if (homeCode) homeCode.innerText = state.user.access_code || 'STU-1001';
+  if (homeStreak) homeStreak.innerText = state.user.streak_days || 1;
+  if (homeHeroLevel) homeHeroLevel.innerText = state.activeLevel || 'B1';
 
-  const avgScore = Math.round(Object.values(state.user.skills).reduce((a, b) => a + b, 0) / 6);
+  const isUserAdmin = state.isAdmin || localStorage.getItem('umar_tutor_is_admin') === 'true' || (state.user.telegram_id && ADMIN_IDS.includes(Number(state.user.telegram_id)));
+
+  if (isUserAdmin) {
+    state.isAdmin = true;
+    if (headerAdminBtn) {
+      headerAdminBtn.style.display = 'inline-flex';
+      headerAdminBtn.innerText = state.activeRole === 'teacher' ? "👨‍🎓 Talaba Ko'rinishi" : "👑 Admin";
+    }
+    if (adminQuickCard) {
+      adminQuickCard.style.display = 'flex';
+      if (adminCardTitle) {
+        adminCardTitle.innerText = state.activeRole === 'teacher' ? "👑 Siz Admin Rejimidamiz" : "Admin & O'qituvchi Boshqaruvi";
+      }
+    }
+    if (headerRole) {
+      headerRole.innerText = state.activeRole === 'teacher' ? "👑 Admin" : "👑 Admin (Talaba)";
+      headerRole.className = "role-badge teacher-badge";
+    }
+  } else {
+    if (headerAdminBtn) headerAdminBtn.style.display = 'none';
+    if (adminQuickCard) adminQuickCard.style.display = 'none';
+    if (headerRole) {
+      headerRole.innerText = "👨‍🎓 O'quvchi";
+      headerRole.className = "role-badge student-badge";
+    }
+  }
+
+  const skillsValues = Object.values(state.user.skills || {});
+  const totalScore = skillsValues.reduce((a, b) => a + b, 0);
+  const avgScore = skillsValues.length > 0 && totalScore > 0 ? Math.round(totalScore / skillsValues.length) : 0;
   if (homeAccuracy) homeAccuracy.innerText = avgScore + '%';
+
+  const progressRing = document.getElementById('progress-overall-percent');
+  if (progressRing) progressRing.innerText = avgScore + '%';
+}
+
+function toggleAdminStudentMode() {
+  triggerHaptic('medium');
+  if (state.activeRole === 'teacher') {
+    state.activeRole = 'student';
+    localStorage.setItem('umar_tutor_role', 'student');
+    showToast("👨‍🎓 O'quvchi ko'rinishiga o'tildi");
+    navigateScreen('screen-home');
+  } else {
+    state.activeRole = 'teacher';
+    localStorage.setItem('umar_tutor_role', 'teacher');
+    showToast("👑 Admin boshqaruv paneliga xush kelibsiz!");
+    navigateScreen('screen-teacher');
+  }
+  syncUserUI();
+}
+
+function enterStudentViewAsAdmin() {
+  state.activeRole = 'student';
+  localStorage.setItem('umar_tutor_role', 'student');
+  showToast("👨‍🎓 O'quvchi ko'rinishiga o'tildi");
+  navigateScreen('screen-home');
+  syncUserUI();
+}
+
+function returnToAdminPanel() {
+  state.activeRole = 'teacher';
+  localStorage.setItem('umar_tutor_role', 'teacher');
+  showToast("👑 Admin boshqaruv paneliga qaytildi");
+  navigateScreen('screen-teacher');
+  syncUserUI();
 }
 
 // =========================================================================
@@ -795,22 +865,43 @@ function renderSpeakingPrompt() {
 function initSpeechEngine() {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SpeechRec) {
-    state.recognition = new SpeechRec();
-    state.recognition.continuous = true;
-    state.recognition.interimResults = true;
-    state.recognition.lang = 'en-US';
+    try {
+      state.recognition = new SpeechRec();
+      state.recognition.continuous = true;
+      state.recognition.interimResults = true;
+      state.recognition.lang = 'en-US';
 
-    state.recognition.onresult = (event) => {
-      let fullTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        fullTranscript += event.results[i][0].transcript + ' ';
-      }
-      state.spokenText = fullTranscript.trim();
-    };
+      state.recognition.onresult = (event) => {
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript + ' ';
+        }
+        state.spokenText = fullTranscript.trim();
+        const liveBox = document.getElementById('speaking-live-transcript-box');
+        const liveText = document.getElementById('speaking-live-transcript-text');
+        if (liveBox && liveText && state.spokenText) {
+          liveBox.style.display = 'block';
+          liveText.innerText = state.spokenText;
+        }
+      };
 
-    state.recognition.onerror = () => {
-      stopSpeakingRecord();
-    };
+      state.recognition.onerror = (e) => {
+        console.log('Speech recognition event:', e?.error || e);
+        // CRITICAL FIX: NEVER call stopSpeakingRecord() on error!
+        // In mobile WebViews, silence triggers 'no-speech' error after 2s which must be ignored.
+      };
+
+      state.recognition.onend = () => {
+        // If recording is still active, restart SpeechRecognition automatically
+        if (state.isRecording) {
+          try {
+            state.recognition.start();
+          } catch (e) {}
+        }
+      };
+    } catch (e) {
+      console.log('Speech engine error:', e);
+    }
   }
 }
 
@@ -834,11 +925,15 @@ function startSpeakingRecord() {
   const timerEl = document.getElementById('recording-timer');
   const feedbackCard = document.getElementById('speaking-ai-feedback-card');
   const playerBox = document.getElementById('student-voice-playback-box');
+  const liveBox = document.getElementById('speaking-live-transcript-box');
+  const liveText = document.getElementById('speaking-live-transcript-text');
 
   if (btn) btn.classList.add('recording');
   if (status) status.innerText = "Tinglamoqda... Gapiring (ingliz tilida)";
   if (feedbackCard) feedbackCard.style.display = 'none';
   if (playerBox) playerBox.style.display = 'none';
+  if (liveBox) liveBox.style.display = 'none';
+  if (liveText) liveText.innerText = '...';
 
   // Request microphone and start MediaRecorder for student playback
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -916,9 +1011,22 @@ function stopSpeakingRecord() {
   analyzeSpeakingTranscript();
 }
 
+function submitManualSpeakingText() {
+  triggerHaptic('medium');
+  const inputEl = document.getElementById('manual-speaking-text');
+  const text = (inputEl?.value || "").trim();
+  if (!text) {
+    alert("Iltimos, avval mavzuga mos javobingizni yozing!");
+    return;
+  }
+  state.spokenText = text;
+  const status = document.getElementById('recording-status');
+  if (status) status.innerText = "Yozma javob tahlil qilinmoqda (ChatGPT AI)... ⏳";
+  analyzeSpeakingTranscript();
+}
+
 async function analyzeSpeakingTranscript() {
   let userText = (state.spokenText || "").trim();
-
   const promptTitle = document.getElementById('speaking-prompt-title')?.innerText || "Speaking";
 
   try {
@@ -947,13 +1055,15 @@ async function analyzeSpeakingTranscript() {
         transcription: "Nutq aniqlanmadi (ovoz eshitilmadi)",
         word_count: 0,
         has_error: true,
+        relevance_badge: "❌ Savolga javob berilmadi",
+        relevance_desc: "Hech qanday ovoz yoki matn kiritilmadi.",
         grammar_errors: [{
           original: "-",
-          corrected: "Iltimos, mikrofonni yoqib ovoz chiqarib gapiring",
+          corrected: "Iltimos, mikrofonni yoqib ovoz chiqarib gapiring yoki matn yozing",
           reason_uz: "Ovoz aniqlanmadi yoki mikrofon ruxsati berilmagan."
         }],
         pronunciation_tip: "❌ Ovoz aniqlanmadi. Qaytadan urinib ko'ring.",
-        feedback_uz: "Birorta ham so'z eshitilmadi. Mikrofon tugmasini bosib, balandroq gapiring."
+        feedback_uz: "Birorta ham so'z eshitilmadi. Mikrofon tugmasini bosib, balandroq gapiring yoki pastda matn sifatida yozing."
       });
     } else if (wc < 4) {
       renderSpeakingAIFeedback({
@@ -963,6 +1073,8 @@ async function analyzeSpeakingTranscript() {
         transcription: userText,
         word_count: wc,
         has_error: true,
+        relevance_badge: "⚠️ Qisman javob berildi",
+        relevance_desc: "Nutq juda qisqa bo'lgani sababli savol to'liq ochilmadi.",
         grammar_errors: [{
           original: userText,
           corrected: "Mavzu bo'yicha to'liq gap tuzing (Subject + Verb + Object)",
@@ -1005,6 +1117,8 @@ async function analyzeSpeakingTranscript() {
         transcription: userText,
         word_count: wc,
         has_error: grammarErrors.length > 0,
+        relevance_badge: "✅ To'liq javob berildi",
+        relevance_desc: "Berilgan mavzu bo'yicha fikr ifodalandi.",
         grammar_errors: grammarErrors,
         pronunciation_tip: grammarErrors.length > 0 ? "⚠️ Intonatsiya va so'z urg'ulariga e'tibor qarating." : "✅ Aniq va tushunarli talaffuz.",
         feedback_uz: grammarErrors.length > 0
@@ -1049,6 +1163,15 @@ function renderSpeakingAIFeedback(feedback) {
     }
   }
 
+  const relBadge = document.getElementById('feedback-relevance-badge');
+  const relDesc = document.getElementById('feedback-relevance-desc');
+  if (relBadge && feedback.relevance_badge) {
+    relBadge.innerText = feedback.relevance_badge;
+  }
+  if (relDesc && feedback.relevance_desc) {
+    relDesc.innerText = feedback.relevance_desc;
+  }
+
   document.getElementById('feedback-band').innerText = feedback.band;
   document.getElementById('feedback-words-count').innerText = `${feedback.word_count || 0} ta`;
   document.getElementById('feedback-transcription-text').innerText = `"${feedback.transcription}"`;
@@ -1074,6 +1197,7 @@ function renderSpeakingAIFeedback(feedback) {
   card.style.display = 'block';
   state.user.skills.speaking = feedback.score;
 }
+
 
 // Canvas waveform generator
 function initWaveformCanvas() {
