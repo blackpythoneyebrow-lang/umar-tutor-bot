@@ -17,3 +17,5 @@ services:
         value: "sqlite+aiosqlite:///./umar_tutor.db"
       - key: WEBAPP_URL
         value: "https://umar-tutor-bot.onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
