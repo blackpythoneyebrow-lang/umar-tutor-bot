@@ -20,6 +20,7 @@ from database.models import (
     CourseMaterial,
     LiveMeeting,
     SubmissionReview,
+    ChallengeProgress,
 )
 
 DEFAULT_SKILLS = {
@@ -683,4 +684,132 @@ async def get_all_user_ids(session: AsyncSession) -> List[int]:
     stmt = select(User.telegram_id)
     res = await session.execute(stmt)
     return list(res.scalars().all())
+
+
+async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
+    """Find user by internal database primary key."""
+    return await session.get(User, user_id)
+
+
+async def get_inactive_students(session: AsyncSession, hours: int = 24) -> List[User]:
+    """Find students who have not had active learning session for more than specified hours."""
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    stmt = (
+        select(User)
+        .where(User.last_active_date < cutoff)
+        .where(User.role == "student")
+        .order_by(User.last_active_date.asc())
+        .limit(100)
+    )
+    res = await session.execute(stmt)
+    return list(res.scalars().all())
+
+
+# =========================================================================
+# 7-DAY CHALLENGE CRUD METHODS
+# =========================================================================
+
+async def get_or_create_challenge_progress(session: AsyncSession, user_id: int) -> ChallengeProgress:
+    """Gets existing 7-day challenge progress or creates initial progress for student."""
+    stmt = select(ChallengeProgress).where(ChallengeProgress.user_id == user_id)
+    res = await session.execute(stmt)
+    progress = res.scalar_one_or_none()
+    if not progress:
+        progress = ChallengeProgress(
+            user_id=user_id,
+            current_day=1,
+            completed_days="[]",
+            challenge_points=0
+        )
+        session.add(progress)
+        await session.commit()
+        await session.refresh(progress)
+    return progress
+
+
+async def complete_challenge_day(
+    session: AsyncSession,
+    user_id: int,
+    day: int,
+    points: int = 50,
+    study_plan_json: Optional[str] = None
+) -> Dict[str, Any]:
+    """Marks day as completed in challenge, increments score, and unlocks next day."""
+    progress = await get_or_create_challenge_progress(session, user_id)
+    try:
+        completed = json.loads(progress.completed_days or "[]")
+    except Exception:
+        completed = []
+
+    if day not in completed:
+        completed.append(day)
+        completed.sort()
+        progress.completed_days = json.dumps(completed)
+        progress.challenge_points = (progress.challenge_points or 0) + points
+
+        # Update user total score as well
+        user = await session.get(User, user_id)
+        if user:
+            user.total_score = (user.total_score or 0) + points
+
+    # Set current day to next unlocked
+    if day >= progress.current_day and day < 7:
+        progress.current_day = day + 1
+
+    if study_plan_json:
+        progress.study_plan = study_plan_json
+
+    if len(completed) >= 7 and not progress.completed_at:
+        progress.completed_at = datetime.utcnow()
+
+    progress.updated_at = datetime.utcnow()
+    await session.commit()
+    await session.refresh(progress)
+
+    return {
+        "current_day": progress.current_day,
+        "completed_days": completed,
+        "challenge_points": progress.challenge_points,
+        "study_plan": progress.study_plan,
+        "is_finished": len(completed) >= 7
+    }
+
+
+async def get_challenge_leaderboard(session: AsyncSession, limit: int = 25) -> List[Dict[str, Any]]:
+    """Returns real-time leaderboard ranked by challenge points and activity."""
+    stmt = (
+        select(User.full_name, User.telegram_id, User.level, ChallengeProgress.challenge_points, ChallengeProgress.completed_days)
+        .join(ChallengeProgress, User.id == ChallengeProgress.user_id)
+        .order_by(desc(ChallengeProgress.challenge_points), desc(ChallengeProgress.updated_at))
+        .limit(limit)
+    )
+    res = await session.execute(stmt)
+    rows = res.all()
+
+    leaderboard = []
+    for rank, (name, tg_id, level, pts, comp_json) in enumerate(rows, start=1):
+        try:
+            days_count = len(json.loads(comp_json or "[]"))
+        except Exception:
+            days_count = 0
+        leaderboard.append({
+            "rank": rank,
+            "full_name": name,
+            "telegram_id": tg_id,
+            "level": level or "Starter",
+            "points": pts or 0,
+            "completed_days_count": days_count
+        })
+
+    # If DB has fewer than 3 entries, add helpful initial demonstration competitors
+    if len(leaderboard) < 3:
+        initial_competitors = [
+            {"rank": len(leaderboard) + 1, "full_name": "Alisher K.", "level": "B1", "points": 350, "completed_days_count": 7},
+            {"rank": len(leaderboard) + 2, "full_name": "Madina R.", "level": "A2", "points": 250, "completed_days_count": 5},
+            {"rank": len(leaderboard) + 3, "full_name": "Jasurbek T.", "level": "Starter", "points": 150, "completed_days_count": 3},
+        ]
+        leaderboard.extend(initial_competitors[:3 - len(leaderboard)])
+
+    return leaderboard
+
 

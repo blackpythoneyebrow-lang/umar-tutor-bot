@@ -36,9 +36,10 @@ ADMIN_WELCOME_TEXT = """
 ⚡️ <b>Boshqaruv imkoniyatlari:</b>
 • 📝 <b>CMS Boshqaruv:</b> Yangi darslar, lug'at, audio talaffuz (🔊), grammatika va testlar qo'shish hamda o'chirish
 • 👥 <b>O'quvchilar Nazorati:</b> Barcha foydalanuvchilar ro'yxati, darajalari, o'zlashtirish foizlari
-• ✍️ <b>Baholash Markazi:</b> O'quvchilar topshirgan speaking va writing ishlariga audio/matnli baho berish
+• ✍️ <b>Baholash Markazi:</b> O'quvchilar topshirgan topshiriqlarni tekshirib, ball va izoh berish (o'quvchiga darhol xabar boradi)
+• ⚡ <b>Faollik Eslatmalari:</b> Darsga kirmagan o'quvchilarga bir bosishda motivatsion eslatma va kunlik iborani yuborish
+• 🎭 <b>Suhbat Simulyatori & 7-Kunlik Challenge:</b> O'quvchilar suhbatlari va reytingini kuzatish
 • 🔴 <b>Jonli Darslar:</b> Telegram / Zoom / Google Meet darslarini e'lon qilish
-• 📢 <b>Broadcast:</b> Barcha foydalanuvchilarga bitta bosishda xabar yuborish
 • 👁 <b>Dual-Mode:</b> O'quvchi rejimida tizimni to'liq ko'rish va testlash
 
 👇 <b>Quyidagi tugmalar orqali kerakli bo'limga o'ting:</b>
@@ -57,7 +58,9 @@ Men <b>"Umar Tutor"</b> — sizning shaxsiy interaktiv ingliz tili repetitoringi
 
 🎯 <b>Platformadagi asosiy imkoniyatlar:</b>
 • 🚀 <b>Placement Test:</b> CEFR darajangizni aniqlash (A1 - C2)
-• 📖 <b>Interaktiv Lug'at:</b> Yangi so'zlar, fonetika (IPA) va jonli audio talaffuz (🔊)
+• 🎭 <b>Real Suhbat Simulyatori:</b> Mehmonxona, restoran, aeroport kabi hayotiy rollarda sun'iy intellekt bilan audio suhbatlashish va xatolarni tahlil qilish!
+• 🔥 <b>7 Kunlik Challenge & Musobaqa:</b> Har kuni 1 ta amaliy topshiriq, jonli reyting va 30 kunlik o'quv rejasi!
+• 📖 <b>Interaktiv Lug'at & Test:</b> Yangi so'zlar, fonetika (IPA), audio talaffuz (🔊) va yodlash testlari
 • 🎙 <b>AI Speaking Coach:</b> Ovoz yozish va nutqni sun'iy intellekt orqali tahlil qilish
 • ✍️ <b>Grammar Checker:</b> Gaplardagi grammatik xatolarni topish va tushuntirish
 • 🎧 <b>Listening & Shadowing:</b> Eshitish va talaffuzni mukammallashtirish

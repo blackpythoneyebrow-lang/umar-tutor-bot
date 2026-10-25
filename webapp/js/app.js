@@ -65,7 +65,17 @@ const state = {
   teacherTab: 'tab-analytics',
   teacherStudents: [],
   teacherMeetings: [],
-  teacherSubmissions: []
+  teacherSubmissions: [],
+  // Roleplay Simulator State
+  roleplayScenario: null,
+  roleplayHistory: [],
+  roleplayShowUz: true,
+  isRoleplayRecording: false,
+  roleplayRecognition: null,
+  // 7-Day Challenge State
+  challengeData: null,
+  challengeTab: 'tab-challenge-days',
+  activeChallengeDay: null
 };
 
 // =========================================================================
@@ -370,6 +380,8 @@ function navigateScreen(targetScreenId, navEl = null, pushHistory = true) {
   if (targetScreenId === 'screen-listening') renderListeningLesson();
   if (targetScreenId === 'screen-reading') renderReadingPassage();
   if (targetScreenId === 'screen-shadowing') renderShadowingLesson();
+  if (targetScreenId === 'screen-roleplay') initRoleplayScreen();
+  if (targetScreenId === 'screen-challenge') loadChallengeData();
   if (targetScreenId === 'screen-progress') renderProgressStats();
   if (targetScreenId === 'screen-teacher') loadTeacherPortalData();
 }
@@ -825,9 +837,9 @@ function startVocabSpecificQuiz() {
   const generatedQuiz = words.map((w, idx) => {
     // Generate 3 fake options
     const otherWords = window.APP_DATA.words.filter(ow => ow.word !== w.word);
-    const fake1 = otherWords[(idx + 1) % otherWords.length].translation_uz;
-    const fake2 = otherWords[(idx + 2) % otherWords.length].translation_uz;
-    const fake3 = otherWords[(idx + 3) % otherWords.length].translation_uz;
+    const fake1 = otherWords.length > 0 ? otherWords[(idx + 1) % otherWords.length].translation_uz : "salom";
+    const fake2 = otherWords.length > 1 ? otherWords[(idx + 2) % otherWords.length].translation_uz : "kitob";
+    const fake3 = otherWords.length > 2 ? otherWords[(idx + 3) % otherWords.length].translation_uz : "uy";
 
     const options = [w.translation_uz, fake1, fake2, fake3].sort(() => Math.random() - 0.5);
     const correctIdx = options.indexOf(w.translation_uz);
@@ -836,10 +848,13 @@ function startVocabSpecificQuiz() {
       id: `vq_${w.id}`,
       level: w.level,
       type: 'mcq',
+      targetWord: w.word,
+      phonetics: w.phonetics,
+      example: w.example,
       question: `"${w.word}" so'zining to'g'ri o'zbekcha tarjimasi qaysi?`,
       options: options,
       correct: correctIdx,
-      explanation_uz: `"${w.word}" (${w.phonetics}) so'zining ma'nosi: ${w.translation_uz}. Misol: ${w.example}`
+      explanation_uz: `"${w.word}" (${w.phonetics || ''}) so'zining ma'nosi: ${w.translation_uz}. Misol: ${w.example || ''}`
     };
   });
 
@@ -1136,6 +1151,10 @@ function renderSpeakingAIFeedback(feedback) {
   const card = document.getElementById('speaking-ai-feedback-card');
   if (!card) return;
 
+  if (state.activeChallengeDay === 2 && feedback.score >= 50) {
+    completeChallengeDayFromModule(2, 50);
+  }
+
   const scoreNum = document.getElementById('feedback-score-num');
   const scoreCircle = document.getElementById('feedback-score-circle');
   if (scoreNum) scoreNum.innerText = feedback.score;
@@ -1262,7 +1281,37 @@ function renderQuizQuestion() {
   document.querySelector('.quiz-container-card').style.display = 'block';
 
   const q = quizzes[state.quizIndex];
-  document.getElementById('quiz-question-title').innerText = q.question;
+  
+  // Prominent Target Word Display for Vocab & MCQ questions
+  let targetWordContainer = document.getElementById('quiz-target-word-container');
+  if (!targetWordContainer) {
+    targetWordContainer = document.createElement('div');
+    targetWordContainer.id = 'quiz-target-word-container';
+    const titleEl = document.getElementById('quiz-question-title');
+    if (titleEl && titleEl.parentNode) {
+      titleEl.parentNode.insertBefore(targetWordContainer, titleEl);
+    }
+  }
+
+  const targetWord = q.targetWord || (q.question.match(/"([^"]+)"/)?.[1] ?? null);
+  if (targetWord && (q.type === 'mcq' || q.targetWord)) {
+    targetWordContainer.style.display = 'block';
+    targetWordContainer.innerHTML = `
+      <div class="vocab-quiz-target-card">
+        <span class="vocab-quiz-target-badge">🎯 So'ralayotgan inglizcha so'z:</span>
+        <div class="vocab-quiz-target-word">${targetWord}</div>
+        ${q.phonetics ? `<div class="vocab-quiz-target-phonetic">${q.phonetics}</div>` : ''}
+        <button type="button" class="vocab-quiz-speaker-btn" onclick="playWordAudio('${targetWord}', this)">
+          🔊 Talaffuzni eshitish
+        </button>
+      </div>
+    `;
+    document.getElementById('quiz-question-title').innerText = "Ushbu so'zning to'g'ri o'zbekcha tarjimasini tanlang:";
+  } else {
+    if (targetWordContainer) targetWordContainer.style.display = 'none';
+    document.getElementById('quiz-question-title').innerText = q.question;
+  }
+
   document.getElementById('quiz-progress-text').innerText = `${state.quizIndex + 1} / ${quizzes.length}`;
   document.getElementById('quiz-streak-counter').innerText = `🔥 ${state.quizScore} to'g'ri`;
 
@@ -1533,6 +1582,12 @@ function restartCurrentQuiz() {
 }
 
 function syncQuizResultToServer(score) {
+  if (state.activeChallengeDay === 1 && score >= 70) {
+    completeChallengeDayFromModule(1, 50);
+  } else if (state.activeChallengeDay === 7 && score >= 70) {
+    completeChallengeDayFromModule(7, 100);
+  }
+
   if (state.user.telegram_id) {
     fetch('/api/quiz/submit', {
       method: 'POST',
@@ -2541,4 +2596,625 @@ async function resetAvatarToDefault() {
     alert("Robot rasmi qaytarildi!");
   } catch (e) {}
 }
+
+// =========================================================================
+// 11. INACTIVE STUDENTS MOTIVATIONAL REMINDERS
+// =========================================================================
+async function sendInactiveStudentReminders() {
+  triggerHaptic('heavy');
+  const btn = document.getElementById('btn-trigger-reminders');
+  const statusMsg = document.getElementById('reminders-status-msg');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "Yuborilmoqda... ⏳";
+  }
+  if (statusMsg) statusMsg.innerText = "Xabarlar yetkazilmoqda...";
+
+  try {
+    const res = await fetch('/api/teacher/send-reminders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (statusMsg) statusMsg.innerHTML = `<span style="color: #16a34a; font-weight: 700;">✓ ${data.message}</span>`;
+      alert(data.message);
+    } else {
+      if (statusMsg) statusMsg.innerText = "Xatolik yuz berdi.";
+    }
+  } catch (err) {
+    if (statusMsg) statusMsg.innerText = "Tarmoq xatosi.";
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "📢 Eslatma Yuborish (Telegram)";
+    }
+  }
+}
+
+// =========================================================================
+// 12. REAL ROLEPLAY CONVERSATION SIMULATOR ENGINE
+// =========================================================================
+const BUILTIN_ROLEPLAY_SCENARIOS = [
+  {
+    id: "hotel",
+    title: "Mehmonxona (Hotel Check-in & Stay)",
+    icon: "🏨",
+    character: "Sarah (Receptionist)",
+    role_uz: "Siz: Mehmon | Bot: Administrator (Sarah)",
+    level: "A2 - B1",
+    initial_message: "Good afternoon! Welcome to Grand Palace Hotel. How may I assist you today?",
+    initial_message_uz: "Xayrli kun! Grand Palace mehmonxonasiga xush kelibsiz. Sizga qanday yordam bera olaman?"
+  },
+  {
+    id: "restaurant",
+    title: "Qahvaxona & Restoran (Ordering Food)",
+    icon: "☕",
+    character: "David (Waiter)",
+    role_uz: "Siz: Mijoz | Bot: Ofitsiant (David)",
+    level: "Starter - A2",
+    initial_message: "Hi there! Welcome to Central Bistro. Table for one, or are you waiting for someone?",
+    initial_message_uz: "Salom! Central Bistro'ga xush kelibsiz. Bir kishilik stolmi yoki birovni kutyapsizmi?"
+  },
+  {
+    id: "airport",
+    title: "Aeroport & Bojxona (Customs & Border)",
+    icon: "✈️",
+    character: "Officer Smith (Immigration)",
+    role_uz: "Siz: Sayohatchi | Bot: Bojxona xodimi",
+    level: "B1 - B2",
+    initial_message: "Good day. Passport and boarding pass, please. What is the purpose of your visit?",
+    initial_message_uz: "Xayrli kun. Pasport va chiqish chiptangizni bering. Tashrifingizdan maqsad nima?"
+  },
+  {
+    id: "interview",
+    title: "Ish Suhbatida (Job Interview)",
+    icon: "💼",
+    character: "Ms. Anderson (HR Director)",
+    role_uz: "Siz: Nomzod | Bot: HR Direktori",
+    level: "B1 - B2",
+    initial_message: "Hello! Welcome to our corporate office. Please take a seat. Could you start by introducing yourself?",
+    initial_message_uz: "Salom! Ofisimizga xush kelibsiz. Marhamat, o'tiring. O'zingiz haqingizda qisqacha tanishtirishdan boshlasak?"
+  },
+  {
+    id: "shopping",
+    title: "Do'konda Xarid (Shopping & Retail)",
+    icon: "🛍️",
+    character: "Emma (Store Assistant)",
+    role_uz: "Siz: Xaridor | Bot: Do'kon maslahatchisi",
+    level: "Starter - A1",
+    initial_message: "Hello! Welcome to TrendStyle. Let me know if you are looking for anything specific today!",
+    initial_message_uz: "Salom! TrendStyle do'koniga xush kelibsiz. Agar biror maxsus kiyim qidirayotgan bo'lsangiz, bemalol ayting!"
+  }
+];
+
+function initRoleplayScreen() {
+  document.getElementById('roleplay-picker-view').style.display = 'block';
+  document.getElementById('roleplay-active-view').style.display = 'none';
+  document.getElementById('roleplay-report-view').style.display = 'none';
+  document.getElementById('btn-finish-roleplay').style.display = 'none';
+  loadRoleplayScenarios();
+}
+
+async function loadRoleplayScenarios() {
+  const container = document.getElementById('roleplay-scenarios-list');
+  if (!container) return;
+
+  let scenarios = BUILTIN_ROLEPLAY_SCENARIOS;
+  try {
+    const res = await fetch('/api/roleplay/scenarios');
+    const data = await res.json();
+    if (data && Array.isArray(data) && data.length > 0) scenarios = data;
+  } catch (e) {}
+
+  container.innerHTML = scenarios.map(sc => `
+    <div class="scenario-card" onclick="startRoleplayScenario('${sc.id}')">
+      <div class="scenario-icon-box">${sc.icon}</div>
+      <div class="scenario-info">
+        <div class="scenario-title">${sc.title}</div>
+        <div class="scenario-desc">${sc.role_uz}</div>
+        <span class="scenario-badge">${sc.level}</span>
+      </div>
+      <div style="font-size: 20px; color: var(--primary);">›</div>
+    </div>
+  `).join('');
+}
+
+function startRoleplayScenario(scenarioId) {
+  triggerHaptic('heavy');
+  const sc = BUILTIN_ROLEPLAY_SCENARIOS.find(s => s.id === scenarioId) || BUILTIN_ROLEPLAY_SCENARIOS[0];
+  state.roleplayScenario = sc.id;
+  state.roleplayHistory = [];
+
+  document.getElementById('roleplay-picker-view').style.display = 'none';
+  document.getElementById('roleplay-active-view').style.display = 'block';
+  document.getElementById('roleplay-report-view').style.display = 'none';
+  document.getElementById('btn-finish-roleplay').style.display = 'inline-block';
+
+  document.getElementById('roleplay-active-title').innerText = `${sc.icon} ${sc.title}`;
+  document.getElementById('roleplay-active-role').innerText = sc.role_uz;
+
+  const chatBox = document.getElementById('roleplay-chat-box');
+  chatBox.innerHTML = '';
+
+  // Render initial greeting
+  appendRoleplayBotBubble(sc.character, sc.initial_message, sc.initial_message_uz);
+  state.roleplayHistory.push({ sender: 'bot', text: sc.initial_message, uz: sc.initial_message_uz });
+
+  // Speak aloud with browser TTS
+  speakBotMessage(sc.initial_message);
+}
+
+function appendRoleplayBotBubble(character, text, uzText) {
+  const chatBox = document.getElementById('roleplay-chat-box');
+  if (!chatBox) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'roleplay-bubble-bot';
+  const escapedText = text.replace(/'/g, "\\'");
+  bubble.innerHTML = `
+    <div class="speaker-row">
+      <span class="speaker-name">🤖 ${character}</span>
+      <button class="btn-secondary" style="font-size: 11px; padding: 2px 8px; border-radius: var(--radius-full);" onclick="speakBotMessage('${escapedText}', this)">🔊 Eshitish</button>
+    </div>
+    <div class="bubble-text">${text}</div>
+    ${uzText ? `<div class="bubble-uz" style="display: ${state.roleplayShowUz ? 'block' : 'none'};">💡 ${uzText}</div>` : ''}
+  `;
+  chatBox.appendChild(bubble);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function appendRoleplayUserBubble(text, mistakes = []) {
+  const chatBox = document.getElementById('roleplay-chat-box');
+  if (!chatBox) return;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'roleplay-bubble-user';
+  
+  let mistakesHtml = '';
+  if (mistakes && mistakes.length > 0) {
+    mistakesHtml = mistakes.map(m => `
+      <span class="mistake-inline-badge">⚠️ Maslahat: '${m.wrong}' o'rniga '${m.correct}' deb aytish tabiiyroq bo'ladi.</span>
+    `).join('');
+  }
+
+  bubble.innerHTML = `
+    <div class="speaker-name">👤 Siz</div>
+    <div class="bubble-text">${text}</div>
+    ${mistakesHtml}
+  `;
+  chatBox.appendChild(bubble);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function speakBotMessage(text, btnEl) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.95;
+
+  if (btnEl) {
+    const orig = btnEl.innerText;
+    btnEl.innerText = "🔊 Gapirmoqda...";
+    utterance.onend = () => { btnEl.innerText = orig; };
+    utterance.onerror = () => { btnEl.innerText = orig; };
+  }
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function toggleRoleplayTranslations() {
+  state.roleplayShowUz = !state.roleplayShowUz;
+  document.querySelectorAll('.roleplay-bubble-bot .bubble-uz').forEach(el => {
+    el.style.display = state.roleplayShowUz ? 'block' : 'none';
+  });
+}
+
+function toggleRoleplayVoiceInput() {
+  const micBtn = document.getElementById('btn-roleplay-mic');
+  const preview = document.getElementById('roleplay-stt-preview');
+  const previewText = document.getElementById('roleplay-stt-text');
+  const input = document.getElementById('roleplay-user-input');
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Kechirasiz, brauzeringiz ovoz orqali yozishni to'liq qo'llab-quvvatlamaydi. Iltimos, javobingizni klaviatura orqali yozing!");
+    input?.focus();
+    return;
+  }
+
+  if (state.isRoleplayRecording) {
+    // Stop recording
+    if (state.roleplayRecognition) state.roleplayRecognition.stop();
+    state.isRoleplayRecording = false;
+    micBtn?.classList.remove('recording');
+    if (preview) preview.style.display = 'none';
+    return;
+  }
+
+  // Start recording
+  triggerHaptic('medium');
+  state.isRoleplayRecording = true;
+  micBtn?.classList.add('recording');
+  if (preview) preview.style.display = 'block';
+  if (previewText) previewText.innerText = "Tinglanmoqda, gapiring...";
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      transcript += event.results[i][0].transcript;
+    }
+    if (input) input.value = transcript;
+    if (previewText) previewText.innerText = transcript;
+  };
+
+  recognition.onerror = () => {
+    state.isRoleplayRecording = false;
+    micBtn?.classList.remove('recording');
+  };
+
+  recognition.onend = () => {
+    state.isRoleplayRecording = false;
+    micBtn?.classList.remove('recording');
+    if (preview) preview.style.display = 'none';
+  };
+
+  state.roleplayRecognition = recognition;
+  try {
+    recognition.start();
+  } catch (err) {
+    state.isRoleplayRecording = false;
+    micBtn?.classList.remove('recording');
+  }
+}
+
+async function submitRoleplayUserMessage() {
+  const input = document.getElementById('roleplay-user-input');
+  const msg = input?.value?.trim();
+  if (!msg) return;
+
+  triggerHaptic('light');
+  input.value = '';
+
+  // 1. Add user bubble
+  appendRoleplayUserBubble(msg);
+  state.roleplayHistory.push({ sender: 'user', text: msg });
+
+  // 2. Call backend for turn response
+  try {
+    const res = await fetch('/api/roleplay/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenario_id: state.roleplayScenario || 'hotel',
+        user_message: msg,
+        history: state.roleplayHistory
+      })
+    });
+    const data = await res.json();
+
+    if (data.bot_reply) {
+      const sc = BUILTIN_ROLEPLAY_SCENARIOS.find(s => s.id === state.roleplayScenario) || BUILTIN_ROLEPLAY_SCENARIOS[0];
+      appendRoleplayBotBubble(sc.character, data.bot_reply, data.bot_reply_uz);
+      state.roleplayHistory.push({ sender: 'bot', text: data.bot_reply, uz: data.bot_reply_uz });
+      speakBotMessage(data.bot_reply);
+    }
+
+    // If reached 6+ turns, hint finish
+    if (state.roleplayHistory.length >= 6) {
+      const btn = document.getElementById('btn-finish-roleplay');
+      if (btn) btn.classList.add('pulse');
+    }
+  } catch (err) {
+    appendRoleplayBotBubble("Assistant", "That sounds great! Could you elaborate on that, please?", "Juda yaxshi! Bu haqida yana batafsilroq ayta olasizmi?");
+  }
+}
+
+async function finishRoleplayAndAnalyze() {
+  triggerHaptic('heavy');
+  if (state.roleplayHistory.length < 2) {
+    alert("Iltimos, avval kamida 1-2 ta gap bilan suhbatlashing!");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/roleplay/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenario_id: state.roleplayScenario || 'hotel',
+        history: state.roleplayHistory
+      })
+    });
+    const report = await res.json();
+
+    // Render report view
+    document.getElementById('roleplay-active-view').style.display = 'none';
+    document.getElementById('roleplay-report-view').style.display = 'block';
+    document.getElementById('btn-finish-roleplay').style.display = 'none';
+
+    document.getElementById('report-score').innerText = report.score || 85;
+    document.getElementById('report-cefr').innerText = `Daraja: ${report.cefr_level || 'B1'}`;
+    document.getElementById('report-summary-text').innerText = report.summary_uz || "Suhbat yakunlandi!";
+
+    // Mistakes list
+    const mistakesEl = document.getElementById('report-mistakes-list');
+    if (mistakesEl) {
+      if (report.mistakes && report.mistakes.length > 0) {
+        mistakesEl.innerHTML = report.mistakes.map(m => `
+          <div class="report-mistake-item">
+            <div class="report-mistake-wrong">Xato: "${m.wrong}"</div>
+            <div class="report-mistake-correct">To'g'ri: "${m.correct}"</div>
+            <div class="report-mistake-reason">💡 ${m.reason_uz}</div>
+          </div>
+        `).join('');
+      } else {
+        mistakesEl.innerHTML = `<div style="font-size: 13px; color: #16a34a; font-weight: 600; padding: 10px;">🎉 Ajoyib! Suhbat davomida qo'pol grammatik xatolar qayd etilmadi.</div>`;
+      }
+    }
+
+    // Situational phrases list
+    const phrasesEl = document.getElementById('report-phrases-list');
+    if (phrasesEl) {
+      const phrases = report.useful_phrases || [];
+      phrasesEl.innerHTML = phrases.map(p => `
+        <div class="report-phrase-item">
+          <div class="report-phrase-en">🇬🇧 "${p.en}"</div>
+          <div class="report-phrase-uz">🇺🇿 ${p.uz}</div>
+        </div>
+      `).join('');
+    }
+
+    // If student was on Day 5 of Challenge, automatically complete Day 5!
+    if (state.activeChallengeDay === 5) {
+      completeChallengeDayFromModule(5, 50);
+    }
+  } catch (err) {
+    alert("Tahlil yuklanishida xatolik yuz berdi.");
+  }
+}
+
+function restartRoleplay() {
+  initRoleplayScreen();
+}
+
+function exitRoleplayToHome() {
+  if (state.roleplayHistory && state.roleplayHistory.length > 1) {
+    if (confirm("Suhbatni yakunlab, asosiy menyuga qaytasizmi?")) {
+      navigateScreen('screen-home');
+    }
+  } else {
+    navigateScreen('screen-home');
+  }
+}
+
+// =========================================================================
+// 13. 7-DAY ENGLISH CHALLENGE & LEADERBOARD ENGINE
+// =========================================================================
+async function loadChallengeData() {
+  try {
+    const tgId = state.user.telegram_id || '';
+    const res = await fetch(`/api/challenge/status?telegram_id=${tgId}`);
+    const data = await res.json();
+    state.challengeData = data;
+
+    // Update Hero Card
+    const completedDays = data.completed_days || [];
+    const completedCount = completedDays.length;
+    const points = data.challenge_points || 0;
+
+    document.getElementById('challenge-days-status-label').innerText = `Bajarildi: ${completedCount} / 7 kun`;
+    document.getElementById('challenge-total-points-label').innerText = `🔥 ${points} Ball`;
+    const pct = Math.round((completedCount / 7) * 100);
+    document.getElementById('challenge-progress-bar-fill').style.width = `${pct}%`;
+
+    // Render Days
+    renderChallengeDays(data.days || [], completedDays, data.current_day || 1);
+
+    // If day 7 completed, render study plan
+    if (data.study_plan) {
+      try {
+        const planObj = typeof data.study_plan === 'string' ? JSON.parse(data.study_plan) : data.study_plan;
+        renderStudyPlan(planObj);
+      } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+function renderChallengeDays(days, completedDays, currentDay) {
+  const container = document.getElementById('challenge-days-list');
+  if (!container) return;
+
+  container.innerHTML = days.map(d => {
+    const isCompleted = completedDays.includes(d.day);
+    const isActive = d.day === currentDay && !isCompleted;
+    const isLocked = d.day > currentDay && !isCompleted;
+
+    let cardClass = 'challenge-day-card';
+    let badgeClass = 'day-badge-col';
+    let badgeContent = `${d.badge}`;
+    let actionBtnHtml = '';
+
+    if (isCompleted) {
+      cardClass += ' completed';
+      badgeClass += ' completed';
+      badgeContent = '✓';
+      actionBtnHtml = `<span style="font-size: 11px; font-weight: 700; color: #16a34a;">+${d.points} ball</span>`;
+    } else if (isActive) {
+      cardClass += ' active-day';
+      badgeClass += ' active-day';
+      badgeContent = `${d.day}`;
+      actionBtnHtml = `<button class="btn-primary-sm" onclick="startChallengeDayTask(${d.day}, '${d.action_target}')">${d.action_text} 🚀</button>`;
+    } else {
+      cardClass += ' locked';
+      badgeClass += ' locked';
+      badgeContent = '🔒';
+      actionBtnHtml = `<span style="font-size: 11px; color: var(--text-dim);">Qulflangan</span>`;
+    }
+
+    return `
+      <div class="${cardClass}">
+        <div class="${badgeClass}">${badgeContent}</div>
+        <div class="day-info-col">
+          <div class="day-title-text">${d.title}</div>
+          <div class="day-task-desc">${d.desc}</div>
+        </div>
+        <div class="day-action-col">
+          ${actionBtnHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function startChallengeDayTask(dayNum, actionTarget) {
+  triggerHaptic('medium');
+  state.activeChallengeDay = dayNum;
+
+  // Navigate to target module
+  if (actionTarget === 'vocab') navigateScreen('screen-vocab');
+  else if (actionTarget === 'speaking') navigateScreen('screen-speaking');
+  else if (actionTarget === 'grammar') navigateScreen('screen-grammar');
+  else if (actionTarget === 'listening') navigateScreen('screen-listening');
+  else if (actionTarget === 'roleplay') navigateScreen('screen-roleplay');
+  else if (actionTarget === 'shadowing') navigateScreen('screen-shadowing');
+  else if (actionTarget === 'quiz') navigateScreen('screen-quiz');
+}
+
+async function completeChallengeDayFromModule(dayNum, points = 50) {
+  try {
+    const res = await fetch('/api/challenge/submit-day', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: state.user.telegram_id,
+        day: dayNum,
+        points: points
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`🎉 Tabriklaymiz! Challenge ${dayNum}-kun topshirig'i bajarildi va sizga +${points} ball berildi! 🔥`);
+      loadChallengeData();
+    }
+  } catch (e) {}
+}
+
+function switchChallengeTab(tabId, btn) {
+  triggerHaptic('light');
+  document.querySelectorAll('.teacher-tabs-row .teacher-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.challenge-tab-pane').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
+
+  if (btn) btn.classList.add('active');
+  const targetPane = document.getElementById(tabId);
+  if (targetPane) {
+    targetPane.classList.add('active');
+    targetPane.style.display = 'block';
+  }
+
+  if (tabId === 'tab-challenge-ranking') loadChallengeLeaderboard();
+  if (tabId === 'tab-challenge-plan') {
+    if (!state.challengeData?.study_plan) {
+      renderStudyPlan({
+        title: "🎓 30 Kunlik Shaxsiy O'quv Rejasi",
+        phases: [
+          { phase: "1-10 Kun: Lug'at Boyligi va Phrasal Verbs", goal: "Kuniga 10 ta yangi so'z", daily_routine: "Ertalab 5 daqiqa Vocab kartochkalari + test." },
+          { phase: "11-20 Kun: Praktik Grammatika va Gap Tuzish", goal: "Present Perfect, Shart ergash gaplar", daily_routine: "Grammatika qoidalarini o'qib, 5 tadan mustaqil gap tuzish." },
+          { phase: "21-30 Kun: Erkin Muloqot va Fluency", goal: "To'xtovsiz ravon gapirish", daily_routine: "Har kuni 1 ta Roleplay suhbati + 5 daqiqa Shadowing." }
+        ],
+        final_advice: "Eng muhimi — kunlik uzluksizlik (consistency)!"
+      });
+    }
+  }
+}
+
+async function loadChallengeLeaderboard() {
+  const container = document.getElementById('challenge-leaderboard-container');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/challenge/leaderboard');
+    const list = await res.json();
+
+    if (list && list.length > 0) {
+      container.innerHTML = list.map(item => {
+        const isMe = item.telegram_id === state.user.telegram_id;
+        let medal = `#${item.rank}`;
+        if (item.rank === 1) medal = '🥇';
+        else if (item.rank === 2) medal = '🥈';
+        else if (item.rank === 3) medal = '🥉';
+
+        return `
+          <div class="leaderboard-row ${isMe ? 'my-rank' : ''}">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="rank-badge">${medal}</span>
+              <div>
+                <b style="color: var(--text-main); font-size: 13px;">${item.full_name} ${isMe ? '(Siz)' : ''}</b>
+                <div style="font-size: 11px; color: var(--text-dim);">${item.level} • ${item.completed_days_count || 0} kun yakunlangan</div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <b style="color: var(--primary); font-size: 14px;">+${item.points}</b>
+              <div style="font-size: 10px; color: var(--text-dim);">ball</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 12px;">Hozircha reyting ma'lumotlari mavjud emas.</div>`;
+    }
+  } catch (e) {}
+}
+
+function renderStudyPlan(plan) {
+  const titleEl = document.getElementById('study-plan-title');
+  const container = document.getElementById('study-plan-phases-list');
+  if (titleEl && plan.title) titleEl.innerText = plan.title;
+  if (!container) return;
+
+  const phases = plan.phases || [];
+  container.innerHTML = phases.map(p => `
+    <div class="plan-phase-box">
+      <div class="plan-phase-title">📌 ${p.phase}</div>
+      <div style="font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Maqsad: ${p.goal}</div>
+      <div class="plan-phase-desc">Kunlik rejim: ${p.daily_routine}</div>
+    </div>
+  `).join('');
+
+  if (plan.final_advice) {
+    container.innerHTML += `
+      <div style="background: rgba(2,132,199,0.08); border-radius: var(--radius-md); padding: 10px; font-size: 12px; color: var(--primary); font-style: italic; margin-top: 10px;">
+        💡 <b>Ustoz tavsiyasi:</b> ${plan.final_advice}
+      </div>
+    `;
+  }
+}
+
+function copyStudyPlanToClipboard() {
+  const planCard = document.querySelector('.challenge-study-plan-card');
+  if (!planCard) return;
+
+  const text = planCard.innerText;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("📋 30 kunlik o'quv rejasi nusxalandi!");
+    }).catch(() => {
+      alert("Reja tayyor!");
+    });
+  } else {
+    alert("Reja tayyor!");
+  }
+}
+
 

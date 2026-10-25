@@ -22,6 +22,7 @@ from loader import bot, dp, setup_bot_and_dispatcher
 from database.base import get_session_maker
 from database import crud
 from services.grammar_checker import analyze_grammar
+from services import roleplay_service, challenge_service
 
 if sys.platform == "win32":
     try:
@@ -733,7 +734,7 @@ async def api_teacher_submissions(request: web.Request) -> web.Response:
 
 
 async def api_teacher_review(request: web.Request) -> web.Response:
-    """Teacher grades student submission with score and written feedback."""
+    """Teacher grades student submission with score and written feedback, notifying student on Telegram."""
     try:
         data = await request.json()
         sub_id = int(data.get("submission_id"))
@@ -742,11 +743,205 @@ async def api_teacher_review(request: web.Request) -> web.Response:
 
         session_maker = get_session_maker()
         async with session_maker() as session:
-            res = await crud.grade_submission(session, sub_id, score, feedback)
-            return web.json_response({"success": bool(res), "message": "Baholandi va feedback saqlandi!"})
+            sub = await crud.grade_submission(session, sub_id, score, feedback)
+            if sub:
+                user = await crud.get_user_by_id(session, sub.user_id)
+                if user and user.telegram_id and bot:
+                    try:
+                        msg = (
+                            f"🎉 <b>Ustoz topshirig'ingizni tekshirdi va baholadi!</b>\n\n"
+                            f"📌 <b>Topshiriq:</b> {sub.title}\n"
+                            f"⭐ <b>Qo'yilgan ball:</b> {score} / 100\n"
+                            f"✍️ <b>Ustoz izohi (Feedback):</b>\n<i>{feedback}</i>\n\n"
+                            f"💪 Shunday davom eting! O'rganishda to'xtamang."
+                        )
+                        await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode="HTML")
+                    except Exception as notify_err:
+                        logger.warning(f"Could not notify student {user.telegram_id}: {notify_err}")
+
+            return web.json_response({"success": bool(sub), "message": "Topshiriq baholandi va o'quvchiga xabar yuborildi! ✨"})
     except Exception as e:
         logger.error(f"Error in review: {e}")
         return web.json_response({"success": False, "error": str(e)}, status=400)
+
+
+async def api_teacher_send_reminders(request: web.Request) -> web.Response:
+    """Teacher broadcasts motivating reminder to inactive students."""
+    try:
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            inactive_users = await crud.get_inactive_students(session, hours=24)
+            if not inactive_users:
+                inactive_users = await crud.get_students_list(session, limit=100)
+
+            sent_count = 0
+            motivational_tips = [
+                ("Consistency is key!", "Har kuni 5 daqiqa ingliz tili o'rganish haftada 1 marta 2 soat o'rgangandan 10 barobar foydaliroq!"),
+                ("Better late than never!", "Hechdan ko'ra kech yaxshi! Bugungi darslaringiz botda sizni kutmoqda."),
+                ("Practice makes perfect!", "Har kuni bitta kichik test topshirib, natijangizni oshiring!"),
+                ("Never give up!", "Bugungi 1 ta yangi mavzu ertangi muvaffaqiyatingiz poydevoridir!"),
+            ]
+            from keyboards.default_keyboards import get_main_keyboard
+
+            for u in inactive_users:
+                if not u.telegram_id:
+                    continue
+                try:
+                    tip_title, tip_desc = random.choice(motivational_tips)
+                    text = (
+                        f"👋 <b>Assalomu alaykum, {u.full_name}!</b>\n\n"
+                        f"Bugun sizni darslarda ko'rmadik. O'quv zanjirini (streak) uzib qo'ymang! 🔥\n\n"
+                        f"💡 <b>Kunning foydali iborasi:</b>\n"
+                        f"<i>\"{tip_title}\"</i> — {tip_desc}\n\n"
+                        f"🚀 Hoziroq kirib, 5 daqiqalik darsingizni yakunlang:"
+                    )
+                    await bot.send_message(
+                        chat_id=u.telegram_id,
+                        text=text,
+                        reply_markup=get_main_keyboard(is_admin=False),
+                        parse_mode="HTML"
+                    )
+                    sent_count += 1
+                except Exception as send_err:
+                    logger.warning(f"Could not send reminder to {u.telegram_id}: {send_err}")
+
+            return web.json_response({
+                "success": True,
+                "sent_count": sent_count,
+                "message": f"Faolligi pasaygan {sent_count} ta o'quvchiga motivatsion eslatma yuborildi! 🚀"
+            })
+    except Exception as e:
+        logger.error(f"Error sending reminders: {e}")
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+# =========================================================================
+# ROLEPLAY CONVERSATION SIMULATOR APIS
+# =========================================================================
+
+async def api_roleplay_scenarios(request: web.Request) -> web.Response:
+    """Returns available roleplay scenarios metadata."""
+    scenarios = roleplay_service.list_all_scenarios()
+    return web.json_response(scenarios)
+
+
+async def api_roleplay_chat(request: web.Request) -> web.Response:
+    """Processes student turn in roleplay dialogue and returns bot response."""
+    try:
+        data = await request.json()
+        scenario_id = data.get("scenario_id", "hotel")
+        user_message = data.get("user_message", "")
+        history = data.get("history", [])
+
+        res = roleplay_service.process_roleplay_turn(scenario_id, user_message, history)
+        return web.json_response(res)
+    except Exception as e:
+        logger.error(f"Error in roleplay chat: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def api_roleplay_analyze(request: web.Request) -> web.Response:
+    """Analyzes full completed roleplay conversation, returns CEFR score & grammar review."""
+    try:
+        data = await request.json()
+        scenario_id = data.get("scenario_id", "hotel")
+        history = data.get("history", [])
+
+        res = roleplay_service.analyze_full_roleplay(scenario_id, history)
+        return web.json_response(res)
+    except Exception as e:
+        logger.error(f"Error in roleplay analysis: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+# =========================================================================
+# 7-DAY ENGLISH CHALLENGE APIS
+# =========================================================================
+
+async def api_challenge_status(request: web.Request) -> web.Response:
+    """Returns user's current progress in 7-day challenge."""
+    tg_id = request.query.get("telegram_id")
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        user = None
+        if tg_id and tg_id.isdigit():
+            user = await crud.get_user_by_telegram_id(session, int(tg_id))
+        if not user:
+            students = await crud.get_students_list(session, limit=1)
+            user = students[0] if students else None
+
+        days = challenge_service.get_all_days_meta()
+        if not user:
+            return web.json_response({
+                "current_day": 1,
+                "completed_days": [],
+                "challenge_points": 0,
+                "days": days
+            })
+
+        progress = await crud.get_or_create_challenge_progress(session, user.id)
+        try:
+            completed = json.loads(progress.completed_days or "[]")
+        except Exception:
+            completed = []
+
+        return web.json_response({
+            "current_day": progress.current_day,
+            "completed_days": completed,
+            "challenge_points": progress.challenge_points,
+            "study_plan": progress.study_plan,
+            "is_finished": len(completed) >= 7,
+            "days": days
+        })
+
+
+async def api_challenge_submit_day(request: web.Request) -> web.Response:
+    """Submits completed challenge day, awards points, and generates next 30-day plan if day 7."""
+    try:
+        data = await request.json()
+        tg_id = data.get("telegram_id")
+        day = int(data.get("day", 1))
+        points = int(data.get("points", 50))
+
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            user = None
+            if tg_id and str(tg_id).isdigit():
+                user = await crud.get_user_by_telegram_id(session, int(tg_id))
+            if not user:
+                students = await crud.get_students_list(session, limit=1)
+                user = students[0] if students else None
+
+            if not user:
+                return web.json_response({"error": "User not found"}, status=404)
+
+            study_plan_json = None
+            if day == 7:
+                plan = challenge_service.generate_next_30_day_plan(user.full_name, (user.total_score or 0) + points)
+                study_plan_json = json.dumps(plan, ensure_ascii=False)
+
+            res = await crud.complete_challenge_day(
+                session=session,
+                user_id=user.id,
+                day=day,
+                points=points,
+                study_plan_json=study_plan_json
+            )
+            return web.json_response({
+                "success": True,
+                **res
+            })
+    except Exception as e:
+        logger.error(f"Error submitting challenge day: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def api_challenge_leaderboard(request: web.Request) -> web.Response:
+    """Returns leaderboard of all students in 7-day challenge."""
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        lb = await crud.get_challenge_leaderboard(session, limit=25)
+        return web.json_response(lb)
 
 
 async def api_get_lessons(request: web.Request) -> web.Response:
@@ -801,6 +996,17 @@ def create_web_application() -> web.Application:
     app.router.add_post("/api/teacher/delete-meeting", api_delete_meeting)
     app.router.add_get("/api/teacher/submissions", api_teacher_submissions)
     app.router.add_post("/api/teacher/review", api_teacher_review)
+    app.router.add_post("/api/teacher/send-reminders", api_teacher_send_reminders)
+
+    # Roleplay Conversation Simulator APIs
+    app.router.add_get("/api/roleplay/scenarios", api_roleplay_scenarios)
+    app.router.add_post("/api/roleplay/chat", api_roleplay_chat)
+    app.router.add_post("/api/roleplay/analyze", api_roleplay_analyze)
+
+    # 7-Day English Challenge APIs
+    app.router.add_get("/api/challenge/status", api_challenge_status)
+    app.router.add_post("/api/challenge/submit-day", api_challenge_submit_day)
+    app.router.add_get("/api/challenge/leaderboard", api_challenge_leaderboard)
 
     # Health check
     app.router.add_get("/health", healthcheck)

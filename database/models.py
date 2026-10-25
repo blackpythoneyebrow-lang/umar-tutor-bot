@@ -54,6 +54,7 @@ class User(Base):
     learned_words = relationship("VocabularyProgress", back_populates="user", cascade="all, delete-orphan")
     mistakes = relationship("MistakeLog", back_populates="user", cascade="all, delete-orphan")
     submission_reviews = relationship("SubmissionReview", back_populates="user", cascade="all, delete-orphan")
+    challenge_progress = relationship("ChallengeProgress", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User {self.telegram_id} ({self.full_name}, role={self.role}, level={self.level})>"
@@ -183,3 +184,19 @@ class SubmissionReview(Base):
     reviewed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="submission_reviews")
+
+
+class ChallengeProgress(Base):
+    """Tracks 7-Day English Challenge progress and leaderboard for students."""
+    __tablename__ = "challenge_progress"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    current_day = Column(Integer, default=1)  # 1 to 7
+    completed_days = Column(Text, default="[]")  # JSON array e.g. [1, 2]
+    challenge_points = Column(Integer, default=0)
+    study_plan = Column(Text, nullable=True)  # Personalized next 30-day study plan (JSON or text)
+    completed_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="challenge_progress")
