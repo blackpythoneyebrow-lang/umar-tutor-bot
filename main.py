@@ -22,7 +22,7 @@ from loader import bot, dp, setup_bot_and_dispatcher
 from database.base import get_session_maker
 from database import crud
 from services.grammar_checker import analyze_grammar
-from services import roleplay_service, challenge_service
+from services import roleplay_service, challenge_service, tts_service
 
 if sys.platform == "win32":
     try:
@@ -944,6 +944,73 @@ async def api_challenge_leaderboard(request: web.Request) -> web.Response:
         return web.json_response(lb)
 
 
+async def api_tts(request: web.Request) -> web.Response:
+    """Returns authentic British English (en-GB) MP3 audio for words, sentences, and listening dialogues with HTTP 206 Range support."""
+    lesson_id = request.query.get("lesson_id", "").strip()
+    text = request.query.get("text", "").strip()
+    accent = request.query.get("accent", "en-gb").lower()
+    if accent in ["uk", "british"]:
+        accent = "en-gb"
+
+    audio_data = None
+    if lesson_id:
+        lesson_file = tts_service.CACHE_DIR / f"{lesson_id}.mp3"
+        if lesson_file.exists():
+            try:
+                with open(lesson_file, "rb") as f:
+                    audio_data = f.read()
+            except Exception as e:
+                logger.warning(f"Error reading cached lesson audio {lesson_id}: {e}")
+
+    if not audio_data and text:
+        try:
+            audio_data = tts_service.generate_british_tts(text, accent=accent)
+        except Exception as e:
+            logger.error(f"Error generating TTS: {e}")
+
+    if not audio_data:
+        return web.Response(text="Audio not available", status=404)
+
+    try:
+        total_length = len(audio_data)
+        range_header = request.headers.get("Range")
+
+        # Handle HTTP 206 Range requests (crucial for iOS Safari, WebKit, and Android WebViews)
+        if range_header:
+            range_match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+            if range_match:
+                start = int(range_match.group(1))
+                end = int(range_match.group(2)) if range_match.group(2) else total_length - 1
+                end = min(end, total_length - 1)
+                if start <= end:
+                    chunk = audio_data[start:end + 1]
+                    return web.Response(
+                        status=206,
+                        body=chunk,
+                        content_type="audio/mpeg",
+                        headers={
+                            "Content-Range": f"bytes {start}-{end}/{total_length}",
+                            "Content-Length": str(len(chunk)),
+                            "Accept-Ranges": "bytes",
+                            "Cache-Control": "public, max-age=604800"
+                        }
+                    )
+
+        return web.Response(
+            status=200,
+            body=audio_data,
+            content_type="audio/mpeg",
+            headers={
+                "Content-Length": str(total_length),
+                "Accept-Ranges": "bytes",
+                "Cache-Control": "public, max-age=604800"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error serving TTS audio: {e}")
+        return web.Response(text="TTS Error", status=500)
+
+
 async def api_get_lessons(request: web.Request) -> web.Response:
     """API endpoint returning available lessons."""
     hw_path = Path(__file__).parent / "data" / "homework.json"
@@ -980,6 +1047,7 @@ def create_web_application() -> web.Application:
     app.router.add_post("/api/speaking/analyze", api_speaking_analyze)
     app.router.add_post("/api/quiz/submit", api_quiz_submit)
     app.router.add_get("/api/lessons", api_get_lessons)
+    app.router.add_get("/api/tts", api_tts)
 
     # Teacher & Admin Portal APIs
     app.router.add_get("/api/teacher/analytics", api_teacher_analytics)

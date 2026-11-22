@@ -329,6 +329,9 @@ function returnToAdminPanel() {
 // =========================================================================
 function navigateScreen(targetScreenId, navEl = null, pushHistory = true) {
   triggerHaptic('light');
+  if (typeof stopAllActiveAudio === 'function') {
+    stopAllActiveAudio();
+  }
 
   const currentEl = document.getElementById(state.currentScreen);
   const targetEl = document.getElementById(targetScreenId);
@@ -757,6 +760,110 @@ function markWordLearned() {
   nextVocabWord();
 }
 
+// =========================================================================
+// CENTRAL BRITISH SPEECH & AUDIO ENGINE (en-GB)
+// =========================================================================
+let currentActiveAudio = null;
+
+function stopAllActiveAudio() {
+  if (typeof stopListeningAudio === 'function') {
+    stopListeningAudio();
+  }
+  if (currentActiveAudio) {
+    try {
+      currentActiveAudio.pause();
+      currentActiveAudio.currentTime = 0;
+    } catch (e) {}
+    currentActiveAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+
+function playBritishSpeech(text, options = {}) {
+  // options: { rate: 0.9, onStart: fn, onEnd: fn, onError: fn }
+  if (!text) return null;
+  stopAllActiveAudio();
+
+  const cleanText = text.trim();
+  const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}&accent=uk`;
+  const audio = new Audio(ttsUrl);
+  currentActiveAudio = audio;
+
+  let isFinished = false;
+  let safetyTimer = null;
+
+  const finish = (isError = false) => {
+    if (isFinished) return;
+    isFinished = true;
+    if (safetyTimer) clearTimeout(safetyTimer);
+    if (currentActiveAudio === audio) currentActiveAudio = null;
+    if (isError) {
+      if (options.onError) options.onError();
+    } else {
+      if (options.onEnd) options.onEnd();
+    }
+  };
+
+  safetyTimer = setTimeout(() => {
+    if (!audio.currentTime || audio.paused) {
+      console.log("TTS audio loading took > 2.5s, triggering British speech synth immediately");
+      try { audio.pause(); } catch (e) {}
+      playBritishSynthFallback(cleanText, options, finish);
+    }
+  }, 2500);
+
+  if (options.onStart) {
+    audio.onplay = () => {
+      if (safetyTimer) clearTimeout(safetyTimer);
+      options.onStart();
+    };
+  } else {
+    audio.onplay = () => {
+      if (safetyTimer) clearTimeout(safetyTimer);
+    };
+  }
+  audio.onended = () => finish(false);
+
+  audio.onerror = (e) => {
+    if (safetyTimer) clearTimeout(safetyTimer);
+    console.warn("Backend TTS audio playback issue, switching to British speech synth:", e);
+    playBritishSynthFallback(cleanText, options, finish);
+  };
+
+  audio.play().catch(err => {
+    if (safetyTimer) clearTimeout(safetyTimer);
+    console.warn("Audio play() catch, falling back to speech synth:", err);
+    playBritishSynthFallback(cleanText, options, finish);
+  });
+
+  return audio;
+}
+
+function playBritishSynthFallback(text, options, callback) {
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-GB';
+      const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+      const ukVoice = voices.find(v => (v.lang === 'en-GB' || v.lang === 'en_GB') || /uk|british|daniel|oliver|george|hazel|serena|arthur|kate/i.test(v.name));
+      if (ukVoice) utterance.voice = ukVoice;
+      utterance.rate = options.rate || 0.9;
+      if (options.onStart) utterance.onstart = () => options.onStart();
+      utterance.onend = () => callback(false);
+      utterance.onerror = () => callback(true);
+      window.speechSynthesis.speak(utterance);
+      return;
+    } catch (synthErr) {
+      callback(true);
+    }
+  } else {
+    callback(true);
+  }
+}
+
 function playWordAudio(wordText, buttonEl = null) {
   if (!wordText) return;
   triggerHaptic('medium');
@@ -764,63 +871,23 @@ function playWordAudio(wordText, buttonEl = null) {
   const btn = buttonEl || document.getElementById('btn-speak-vocab');
   if (btn) btn.classList.add('playing');
 
-  const cleanWord = encodeURIComponent(wordText.trim().replace(/[^a-zA-Z\s-]/g, ''));
-  const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${cleanWord}`;
-  const dictTtsUrl = `https://api.dictionaryapi.dev/media/pronunciations/en/${cleanWord.toLowerCase()}-us.mp3`;
-
-  const audio = new Audio();
-  let finished = false;
-
-  const cleanup = () => {
-    if (!finished) {
-      finished = true;
+  playBritishSpeech(wordText, {
+    rate: 0.85,
+    onStart: () => {
+      if (btn) btn.classList.add('playing');
+    },
+    onEnd: () => {
+      if (btn) btn.classList.remove('playing');
+    },
+    onError: () => {
       if (btn) btn.classList.remove('playing');
     }
-  };
-
-  audio.onended = cleanup;
-  audio.onerror = () => {
-    // Try secondary dictionary audio
-    const secondaryAudio = new Audio(dictTtsUrl);
-    secondaryAudio.onended = cleanup;
-    secondaryAudio.onerror = () => {
-      // Fallback to SpeechSynthesis
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(wordText);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.85;
-        utterance.onend = cleanup;
-        utterance.onerror = cleanup;
-        window.speechSynthesis.speak(utterance);
-      } else {
-        cleanup();
-      }
-    };
-    secondaryAudio.play().catch(() => {
-      // If secondary audio fails to play, speech synth fallback
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(wordText);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.85;
-        utterance.onend = cleanup;
-        utterance.onerror = cleanup;
-        window.speechSynthesis.speak(utterance);
-      } else {
-        cleanup();
-      }
-    });
-  };
-
-  audio.src = googleTtsUrl;
-  audio.play().catch(err => {
-    console.log("Direct play catch, trying fallback:", err);
-    audio.onerror();
   });
 
-  // Safety timer to remove animation
-  setTimeout(cleanup, 2500);
+  // Safety timer
+  setTimeout(() => {
+    if (btn) btn.classList.remove('playing');
+  }, 3500);
 }
 
 function playCurrentWordAudio() {
@@ -884,7 +951,7 @@ function initSpeechEngine() {
       state.recognition = new SpeechRec();
       state.recognition.continuous = true;
       state.recognition.interimResults = true;
-      state.recognition.lang = 'en-US';
+      state.recognition.lang = 'en-GB';
 
       state.recognition.onresult = (event) => {
         let fullTranscript = '';
@@ -1700,10 +1767,45 @@ function getFilteredListening() {
   return levelList.length > 0 ? levelList : allList;
 }
 
+let listeningAudioInstance = null;
+
+function stopListeningAudio() {
+  if (listeningAudioInstance) {
+    try {
+      listeningAudioInstance.pause();
+      listeningAudioInstance.currentTime = 0;
+    } catch (e) {}
+    listeningAudioInstance = null;
+  }
+  state.isListeningPlaying = false;
+  const btn = document.getElementById('btn-play-listening');
+  if (btn) btn.innerText = "▶";
+}
+
+function seekListeningAudio(event) {
+  if (!listeningAudioInstance || !listeningAudioInstance.duration) return;
+  const track = event.currentTarget;
+  const rect = track.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const fraction = Math.max(0, Math.min(1, clickX / rect.width));
+  listeningAudioInstance.currentTime = fraction * listeningAudioInstance.duration;
+  const bar = document.getElementById('audio-progress-bar');
+  if (bar) bar.style.width = `${fraction * 100}%`;
+}
+
 function renderListeningLesson() {
   const lessons = getFilteredListening();
   const current = lessons[state.listeningIndex] || lessons[0];
   if (!current) return;
+
+  // Reset audio playback and progress
+  stopListeningAudio();
+  const bar = document.getElementById('audio-progress-bar');
+  if (bar) bar.style.width = '0%';
+  const label = document.getElementById('audio-time-label');
+  if (label) label.innerText = '0:00';
+  const playBtn = document.getElementById('btn-play-listening');
+  if (playBtn) playBtn.innerText = '▶';
 
   document.getElementById('listening-lesson-title').innerText = current.title;
   document.getElementById('listening-speakers-text').innerText = `${current.speaker} • ${current.duration}`;
@@ -1730,43 +1832,166 @@ function toggleListeningAudio() {
   const lessons = getFilteredListening();
   const current = lessons[state.listeningIndex] || lessons[0];
   const btn = document.getElementById('btn-play-listening');
+  const bar = document.getElementById('audio-progress-bar');
+  const label = document.getElementById('audio-time-label');
 
-  if (state.isListeningPlaying) {
+  if (state.isListeningPlaying && listeningAudioInstance) {
+    // Currently playing -> pause
+    listeningAudioInstance.pause();
     state.isListeningPlaying = false;
-    btn.innerText = "▶";
-    clearInterval(state.listeningTimer);
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  } else {
-    state.isListeningPlaying = true;
-    btn.innerText = "⏸";
+    if (btn) btn.innerText = "▶";
+    return;
+  }
 
-    // Play dialog via SpeechSynthesis
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(current.dialogueAudioText);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.9;
-      utterance.onend = () => {
-        state.isListeningPlaying = false;
-        btn.innerText = "▶";
-      };
-      window.speechSynthesis.speak(utterance);
-    }
+  // If paused mid-stream, resume smoothly
+  if (listeningAudioInstance && !listeningAudioInstance.ended && listeningAudioInstance.paused) {
+    listeningAudioInstance.play().then(() => {
+      state.isListeningPlaying = true;
+      if (btn) btn.innerText = "⏸";
+    }).catch(err => {
+      console.warn("Audio resume failed, restarting fresh:", err);
+      startFreshListeningAudio();
+    });
+    return;
+  }
 
-    // Simulate progress slider
-    state.listeningSeconds = 0;
-    const bar = document.getElementById('audio-progress-bar');
-    const label = document.getElementById('audio-time-label');
+  startFreshListeningAudio();
 
-    state.listeningTimer = setInterval(() => {
-      state.listeningSeconds++;
-      const pct = Math.min(100, (state.listeningSeconds / 45) * 100);
+  function startFreshListeningAudio() {
+    stopListeningAudio();
+    stopAllActiveAudio();
+
+    const textToSpeak = current.dialogueAudioText || current.script || "";
+    if (!textToSpeak) return;
+
+    if (btn) btn.innerText = "⏳";
+    const audioUrl = `/api/tts?lesson_id=${encodeURIComponent(current.id || '')}&text=${encodeURIComponent(textToSpeak)}&accent=uk`;
+    const audio = new Audio(audioUrl);
+    listeningAudioInstance = audio;
+    currentActiveAudio = audio;
+
+    let fallbackTriggered = false;
+    const triggerFallback = () => {
+      if (fallbackTriggered) return;
+      fallbackTriggered = true;
+      try { audio.pause(); } catch (e) {}
+      playBritishSynthListening(textToSpeak, current.duration);
+    };
+
+    const safetyTimeout = setTimeout(() => {
+      if (!audio.currentTime || audio.paused) {
+        console.warn("Listening audio slow or blocked, triggering British speech synth fallback");
+        triggerFallback();
+      }
+    }, 2800);
+
+    const formatTime = (secs) => {
+      const s = Math.floor(secs || 0);
+      const m = Math.floor(s / 60);
+      const remSec = s % 60;
+      return `${m}:${remSec < 10 ? '0' : ''}${remSec}`;
+    };
+
+    audio.onplay = () => {
+      clearTimeout(safetyTimeout);
+      state.isListeningPlaying = true;
+      if (btn) btn.innerText = "⏸";
+    };
+
+    audio.ontimeupdate = () => {
+      if (!audio.duration || isNaN(audio.duration)) return;
+      const pct = Math.min(100, (audio.currentTime / audio.duration) * 100);
       if (bar) bar.style.width = `${pct}%`;
-      const mins = String(Math.floor(state.listeningSeconds / 60)).padStart(1, '0');
-      const secs = String(state.listeningSeconds % 60).padStart(2, '0');
-      if (label) label.innerText = `${mins}:${secs}`;
-      if (pct >= 100) clearInterval(state.listeningTimer);
-    }, 1000);
+      if (label) label.innerText = formatTime(audio.currentTime);
+    };
+
+    audio.onended = () => {
+      state.isListeningPlaying = false;
+      if (btn) btn.innerText = "▶";
+      if (bar) bar.style.width = "100%";
+      listeningAudioInstance = null;
+    };
+
+    audio.onerror = () => {
+      clearTimeout(safetyTimeout);
+      triggerFallback();
+    };
+
+    audio.play().catch(err => {
+      console.warn("Listening audio.play() blocked:", err);
+      clearTimeout(safetyTimeout);
+      triggerFallback();
+    });
+  }
+}
+
+function playBritishSynthListening(textToSpeak, durationStr = "0:45") {
+  const btn = document.getElementById('btn-play-listening');
+  const bar = document.getElementById('audio-progress-bar');
+  const label = document.getElementById('audio-time-label');
+
+  if (!('speechSynthesis' in window)) {
+    state.isListeningPlaying = false;
+    if (btn) btn.innerText = "▶";
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'en-GB';
+    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    const ukVoice = voices.find(v => (v.lang === 'en-GB' || v.lang === 'en_GB') || /uk|british|daniel|oliver|george|hazel|serena/i.test(v.name));
+    if (ukVoice) utterance.voice = ukVoice;
+    utterance.rate = 0.92;
+
+    let totalSecs = 45;
+    if (durationStr && durationStr.includes(':')) {
+      const parts = durationStr.split(':');
+      totalSecs = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    }
+    if (totalSecs <= 0) totalSecs = 45;
+
+    let elapsed = 0;
+    if (state.listeningTimer) clearInterval(state.listeningTimer);
+
+    const formatTime = (secs) => {
+      const s = Math.floor(secs || 0);
+      const m = Math.floor(s / 60);
+      const remSec = s % 60;
+      return `${m}:${remSec < 10 ? '0' : ''}${remSec}`;
+    };
+
+    utterance.onstart = () => {
+      state.isListeningPlaying = true;
+      if (btn) btn.innerText = "⏸";
+      state.listeningTimer = setInterval(() => {
+        elapsed++;
+        const pct = Math.min(100, (elapsed / totalSecs) * 100);
+        if (bar) bar.style.width = `${pct}%`;
+        if (label) label.innerText = formatTime(elapsed);
+        if (elapsed >= totalSecs) {
+          clearInterval(state.listeningTimer);
+        }
+      }, 1000);
+    };
+
+    const cleanup = () => {
+      state.isListeningPlaying = false;
+      if (btn) btn.innerText = "▶";
+      if (state.listeningTimer) clearInterval(state.listeningTimer);
+      if (bar) bar.style.width = "100%";
+    };
+
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
+
+    window.speechSynthesis.speak(utterance);
+    state.isListeningPlaying = true;
+    if (btn) btn.innerText = "⏸";
+  } catch (err) {
+    state.isListeningPlaying = false;
+    if (btn) btn.innerText = "▶";
   }
 }
 
@@ -1897,14 +2122,9 @@ function speakCurrentShadowingLine() {
   const current = shadows.find(s => s.level === state.activeLevel) || shadows[0];
   if (!current || !current.scriptLines) return;
   const line = current.scriptLines[state.shadowingLineIndex];
+  if (!line || !line.text) return;
 
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(line.text);
-    utterance.lang = 'en-US';
-    utterance.rate = state.shadowingSpeed;
-    window.speechSynthesis.speak(utterance);
-  }
+  playBritishSpeech(line.text, { rate: state.shadowingSpeed || 0.9 });
 }
 
 function repeatShadowingLine() {
@@ -2742,8 +2962,62 @@ function startRoleplayScenario(scenarioId) {
   appendRoleplayBotBubble(sc.character, sc.initial_message, sc.initial_message_uz);
   state.roleplayHistory.push({ sender: 'bot', text: sc.initial_message, uz: sc.initial_message_uz });
 
-  // Speak aloud with browser TTS
+  // Render quick suggestion pills for this scenario
+  renderRoleplayQuickSuggestions(sc.id);
+
+  // Speak aloud with British voice
   speakBotMessage(sc.initial_message);
+}
+
+const SCENARIO_SUGGESTIONS = {
+  hotel: [
+    "I have a reservation under my name.",
+    "Could you tell me what time breakfast is?",
+    "Could I have the Wi-Fi password, please?",
+    "What time is check-out tomorrow?"
+  ],
+  restaurant: [
+    "Table for one, please.",
+    "Could I see the menu, please?",
+    "What do you recommend for today?",
+    "Could we have the bill, please?"
+  ],
+  airport: [
+    "I am traveling for tourism and sightseeing.",
+    "I will be staying for ten days.",
+    "Here is my return ticket to Tashkent.",
+    "I have nothing to declare."
+  ],
+  interview: [
+    "I have three years of experience in this field.",
+    "I am very passionate about learning new skills.",
+    "My biggest strength is solving complex problems.",
+    "Could you tell me more about the team culture?"
+  ],
+  shopping: [
+    "Do you have this in a medium size?",
+    "Where are the fitting rooms located?",
+    "How much does this cost?",
+    "Can I pay with credit card?"
+  ]
+};
+
+function renderRoleplayQuickSuggestions(scenarioId) {
+  const container = document.getElementById('roleplay-quick-suggestions');
+  if (!container) return;
+
+  const suggestions = SCENARIO_SUGGESTIONS[scenarioId] || SCENARIO_SUGGESTIONS.hotel;
+  container.innerHTML = suggestions.map(text => {
+    const escaped = text.replace(/'/g, "\\'");
+    return `<button type="button" class="quick-reply-pill" onclick="selectRoleplayQuickReply('${escaped}')">💬 ${text}</button>`;
+  }).join('');
+}
+
+function selectRoleplayQuickReply(text) {
+  triggerHaptic('light');
+  const input = document.getElementById('roleplay-user-input');
+  if (input) input.value = text;
+  submitRoleplayUserMessage();
 }
 
 function appendRoleplayBotBubble(character, text, uzText) {
@@ -2752,15 +3026,18 @@ function appendRoleplayBotBubble(character, text, uzText) {
 
   const bubble = document.createElement('div');
   bubble.className = 'roleplay-bubble-bot';
-  const escapedText = text.replace(/'/g, "\\'");
   bubble.innerHTML = `
     <div class="speaker-row">
       <span class="speaker-name">🤖 ${character}</span>
-      <button class="btn-secondary" style="font-size: 11px; padding: 2px 8px; border-radius: var(--radius-full);" onclick="speakBotMessage('${escapedText}', this)">🔊 Eshitish</button>
+      <button type="button" class="btn-secondary roleplay-listen-btn" style="font-size: 11px; padding: 3px 10px; border-radius: var(--radius-full); font-weight: 600;">🔊 Eshitish</button>
     </div>
     <div class="bubble-text">${text}</div>
     ${uzText ? `<div class="bubble-uz" style="display: ${state.roleplayShowUz ? 'block' : 'none'};">💡 ${uzText}</div>` : ''}
   `;
+  const listenBtn = bubble.querySelector('.roleplay-listen-btn');
+  if (listenBtn) {
+    listenBtn.addEventListener('click', () => speakBotMessage(text, listenBtn));
+  }
   chatBox.appendChild(bubble);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -2775,35 +3052,38 @@ function appendRoleplayUserBubble(text, mistakes = []) {
   let mistakesHtml = '';
   if (mistakes && mistakes.length > 0) {
     mistakesHtml = mistakes.map(m => `
-      <span class="mistake-inline-badge">⚠️ Maslahat: '${m.wrong}' o'rniga '${m.correct}' deb aytish tabiiyroq bo'ladi.</span>
+      <span class="mistake-inline-badge">⚠️ <b>Tavsiya:</b> "${m.wrong}" o'rniga <b>"${m.correct}"</b> deyiladi.<br><small style="color: #475569;">${m.explanation_uz || ''}</small></span>
     `).join('');
   }
 
   bubble.innerHTML = `
     <div class="speaker-name">👤 Siz</div>
     <div class="bubble-text">${text}</div>
-    ${mistakesHtml}
+    <div class="bubble-mistakes-container">${mistakesHtml}</div>
   `;
   chatBox.appendChild(bubble);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function speakBotMessage(text, btnEl) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
+function speakBotMessage(text, btnEl = null) {
+  if (!text) return;
+  triggerHaptic('light');
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.95;
+  const origText = btnEl ? btnEl.innerText : null;
+  if (btnEl) btnEl.innerText = "🔊 O'qilmoqda...";
 
-  if (btnEl) {
-    const orig = btnEl.innerText;
-    btnEl.innerText = "🔊 Gapirmoqda...";
-    utterance.onend = () => { btnEl.innerText = orig; };
-    utterance.onerror = () => { btnEl.innerText = orig; };
-  }
-
-  window.speechSynthesis.speak(utterance);
+  playBritishSpeech(text, {
+    rate: 0.95,
+    onStart: () => {
+      if (btnEl) btnEl.innerText = "🔊 O'qilmoqda...";
+    },
+    onEnd: () => {
+      if (btnEl) btnEl.innerText = origText || "🔊 Eshitish";
+    },
+    onError: () => {
+      if (btnEl) btnEl.innerText = origText || "🔊 Eshitish";
+    }
+  });
 }
 
 function toggleRoleplayTranslations() {
@@ -2821,74 +3101,132 @@ function toggleRoleplayVoiceInput() {
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("Kechirasiz, brauzeringiz ovoz orqali yozishni to'liq qo'llab-quvvatlamaydi. Iltimos, javobingizni klaviatura orqali yozing!");
+    alert("Kechirasiz, brauzeringiz ovoz orqali yozishni to'liq qo'llab-quvvatlamaydi. Iltimos, tayyor tugmalardan foydalaning yoki javobingizni yozing!");
     input?.focus();
     return;
   }
 
+  // If already recording, stop immediately and submit
   if (state.isRoleplayRecording) {
-    // Stop recording
-    if (state.roleplayRecognition) state.roleplayRecognition.stop();
-    state.isRoleplayRecording = false;
-    micBtn?.classList.remove('recording');
-    if (preview) preview.style.display = 'none';
+    if (state.roleplaySilenceTimer) clearTimeout(state.roleplaySilenceTimer);
+    if (state.roleplayInitialTimer) clearTimeout(state.roleplayInitialTimer);
+    if (state.roleplayRecognition) {
+      try { state.roleplayRecognition.stop(); } catch (e) {}
+    }
+    finishAndSubmitRoleplayVoice();
     return;
   }
 
   // Start recording
   triggerHaptic('medium');
   state.isRoleplayRecording = true;
-  micBtn?.classList.add('recording');
+  state.roleplayTranscript = '';
+  if (micBtn) micBtn.classList.add('recording');
   if (preview) preview.style.display = 'block';
   if (previewText) previewText.innerText = "Tinglanmoqda, gapiring...";
 
   const recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
+  recognition.lang = 'en-GB'; // British English!
   recognition.interimResults = true;
   recognition.continuous = false;
 
-  recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      transcript += event.results[i][0].transcript;
-    }
-    if (input) input.value = transcript;
-    if (previewText) previewText.innerText = transcript;
+  // Auto-silence timer: when user pauses for 2.2 seconds after speaking, auto-submit
+  const resetSilenceTimer = () => {
+    if (state.roleplaySilenceTimer) clearTimeout(state.roleplaySilenceTimer);
+    state.roleplaySilenceTimer = setTimeout(() => {
+      console.log("Auto-submitting roleplay voice after pause...");
+      try { recognition.stop(); } catch (e) {}
+      finishAndSubmitRoleplayVoice();
+    }, 2200);
   };
 
-  recognition.onerror = () => {
-    state.isRoleplayRecording = false;
-    micBtn?.classList.remove('recording');
+  // Initial safety timer: if no words spoken in 6s, finish gracefully
+  if (state.roleplayInitialTimer) clearTimeout(state.roleplayInitialTimer);
+  state.roleplayInitialTimer = setTimeout(() => {
+    if (state.isRoleplayRecording && !state.roleplayTranscript) {
+      try { recognition.stop(); } catch (e) {}
+      finishAndSubmitRoleplayVoice();
+    }
+  }, 6000);
+
+  recognition.onresult = (event) => {
+    let fullTranscript = '';
+    for (let i = 0; i < event.results.length; ++i) {
+      fullTranscript += event.results[i][0].transcript + ' ';
+    }
+    fullTranscript = fullTranscript.trim();
+    state.roleplayTranscript = fullTranscript;
+    if (input && fullTranscript) input.value = fullTranscript;
+    if (previewText && fullTranscript) previewText.innerText = fullTranscript;
+    resetSilenceTimer();
+  };
+
+  recognition.onerror = (e) => {
+    console.log("Roleplay voice recognition note:", e?.error || e);
+    if (e.error !== 'no-speech') {
+      finishAndSubmitRoleplayVoice();
+    }
   };
 
   recognition.onend = () => {
-    state.isRoleplayRecording = false;
-    micBtn?.classList.remove('recording');
-    if (preview) preview.style.display = 'none';
+    finishAndSubmitRoleplayVoice();
   };
 
   state.roleplayRecognition = recognition;
   try {
     recognition.start();
   } catch (err) {
+    console.warn("Speech recognition start failed:", err);
     state.isRoleplayRecording = false;
-    micBtn?.classList.remove('recording');
+    if (micBtn) micBtn.classList.remove('recording');
+    if (preview) preview.style.display = 'none';
+  }
+}
+
+async function finishAndSubmitRoleplayVoice() {
+  if (!state.isRoleplayRecording) return;
+  state.isRoleplayRecording = false;
+
+  if (state.roleplaySilenceTimer) clearTimeout(state.roleplaySilenceTimer);
+  if (state.roleplayInitialTimer) clearTimeout(state.roleplayInitialTimer);
+
+  const micBtn = document.getElementById('btn-roleplay-mic');
+  const preview = document.getElementById('roleplay-stt-preview');
+  const previewText = document.getElementById('roleplay-stt-text');
+  const input = document.getElementById('roleplay-user-input');
+
+  if (micBtn) micBtn.classList.remove('recording');
+
+  const textToSubmit = (input?.value || state.roleplayTranscript || "").trim();
+
+  if (textToSubmit) {
+    if (previewText) previewText.innerText = "Tahlil qilinmoqda va yuborilmoqda... ⏳";
+    triggerHaptic('medium');
+    await submitRoleplayUserMessage();
+    if (preview) preview.style.display = 'none';
+  } else {
+    if (previewText) previewText.innerText = "⚠️ Ovoz eshitilmadi. Yuqoridagi tayyor javoblarni tanlang yoki yozing!";
+    setTimeout(() => {
+      if (preview && !state.isRoleplayRecording) preview.style.display = 'none';
+    }, 3500);
+    input?.focus();
   }
 }
 
 async function submitRoleplayUserMessage() {
   const input = document.getElementById('roleplay-user-input');
-  const msg = input?.value?.trim();
+  const msg = (input?.value || state.roleplayTranscript || "").trim();
   if (!msg) return;
 
   triggerHaptic('light');
-  input.value = '';
+  if (input) input.value = '';
+  state.roleplayTranscript = '';
 
   // 1. Add user bubble
   appendRoleplayUserBubble(msg);
   state.roleplayHistory.push({ sender: 'user', text: msg });
 
-  // 2. Call backend for turn response
+  // 2. Call backend for turn response & grammar analysis
   try {
     const res = await fetch('/api/roleplay/chat', {
       method: 'POST',
@@ -2901,15 +3239,32 @@ async function submitRoleplayUserMessage() {
     });
     const data = await res.json();
 
+    // 3. If mistakes detected, attach real-time feedback to the last user bubble
+    if (data.detected_mistakes && data.detected_mistakes.length > 0) {
+      const userBubbles = document.querySelectorAll('#roleplay-chat-box .roleplay-bubble-user .bubble-mistakes-container');
+      const lastContainer = userBubbles[userBubbles.length - 1];
+      if (lastContainer) {
+        lastContainer.innerHTML = data.detected_mistakes.map(m => `
+          <span class="mistake-inline-badge">⚠️ <b>Tavsiya:</b> "${m.wrong}" o'rniga <b>"${m.correct}"</b> deyiladi.<br><small style="color: #475569;">${m.explanation_uz || ''}</small></span>
+        `).join('');
+      }
+    }
+
+    // 4. Append bot reply
     if (data.bot_reply) {
       const sc = BUILTIN_ROLEPLAY_SCENARIOS.find(s => s.id === state.roleplayScenario) || BUILTIN_ROLEPLAY_SCENARIOS[0];
       appendRoleplayBotBubble(sc.character, data.bot_reply, data.bot_reply_uz);
       state.roleplayHistory.push({ sender: 'bot', text: data.bot_reply, uz: data.bot_reply_uz });
+      
+      // Speak bot reply aloud in British English!
       speakBotMessage(data.bot_reply);
     }
 
-    // If reached 6+ turns, hint finish
-    if (state.roleplayHistory.length >= 6) {
+    // 5. Update quick reply suggestions
+    renderRoleplayQuickSuggestions(state.roleplayScenario || 'hotel');
+
+    // 6. If reached 4+ turns, highlight finish button
+    if (state.roleplayHistory.length >= 4) {
       const btn = document.getElementById('btn-finish-roleplay');
       if (btn) btn.classList.add('pulse');
     }
@@ -2961,16 +3316,22 @@ async function finishRoleplayAndAnalyze() {
       }
     }
 
-    // Situational phrases list
+    // Situational phrases list with British Audio
     const phrasesEl = document.getElementById('report-phrases-list');
     if (phrasesEl) {
       const phrases = report.useful_phrases || [];
-      phrasesEl.innerHTML = phrases.map(p => `
-        <div class="report-phrase-item">
-          <div class="report-phrase-en">🇬🇧 "${p.en}"</div>
-          <div class="report-phrase-uz">🇺🇿 ${p.uz}</div>
-        </div>
-      `).join('');
+      phrasesEl.innerHTML = phrases.map(p => {
+        const cleanEn = p.en.replace(/'/g, "\\'");
+        return `
+          <div class="report-phrase-item" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div>
+              <div class="report-phrase-en">🇬🇧 "${p.en}"</div>
+              <div class="report-phrase-uz">🇺🇿 ${p.uz}</div>
+            </div>
+            <button type="button" class="btn-secondary" style="font-size: 11px; padding: 4px 8px; border-radius: var(--radius-full); flex-shrink: 0;" onclick="playWordAudio('${cleanEn}', this)">🔊 Eshitish</button>
+          </div>
+        `;
+      }).join('');
     }
 
     // If student was on Day 5 of Challenge, automatically complete Day 5!
